@@ -17,6 +17,16 @@ function StudentProfile() {
     phoneNumber: user?.phoneNumber || '',
     parentMobileNumber: user?.parentMobileNumber || '',
   });
+
+  // Update profile data when user changes
+  React.useEffect(() => {
+    if (user) {
+      setProfileData({
+        phoneNumber: user.phoneNumber || '',
+        parentMobileNumber: user.parentMobileNumber || '',
+      });
+    }
+  }, [user]);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -168,11 +178,11 @@ function StudentProfile() {
       <div style={styles.photoContainer}>
         {previewUrl ? (
           <img src={previewUrl} alt="Profile Preview" style={styles.image} />
-        ) : user.profilePhoto ? (
+        ) : user && user.profilePhoto ? (
           <img src={user.profilePhoto} alt="Profile" style={styles.image} />
         ) : (
           <div style={styles.placeholderImage}>
-            {user.name ? user.name.charAt(0).toUpperCase() : 'S'}
+            {user && user.name ? user.name.charAt(0).toUpperCase() : 'S'}
           </div>
         )}
       </div>

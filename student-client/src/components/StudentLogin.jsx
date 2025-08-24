@@ -23,9 +23,10 @@ const StudentLogin = () => {
         data
       );
       login(response.data.student);
+      console.log("Login response:", response.data);
       localStorage.setItem("token", response.data.token);
       alert("Login Successful!");
-      navigate("/home");
+      // navigate("/home");
     } catch (error) {
       alert(error.response?.data?.message || "Login failed");
     }

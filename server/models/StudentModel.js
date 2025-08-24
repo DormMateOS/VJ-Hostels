@@ -10,20 +10,20 @@ const studentSchema = new mongoose.Schema({
     rollNumber: {
         type: String,
         required: true,
-        unique: true
+        // unique: true
     },
     username: {
         type: String,
-        required: true,
+        // required: true,
         unique: true
     },
     phoneNumber: {
         type: String,
-        required: true
+        // required: true
     },
     parentMobileNumber: {
         type: String,
-        required: true
+        // required: true
     },
     password: {
         type: String,

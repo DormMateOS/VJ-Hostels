@@ -23,6 +23,7 @@ const Login = () => {
     try {
       setLoading(true);
       setError("");
+      console.log("Submitting login data:", data);
       const response = await axios.post(
         `${import.meta.env.VITE_SERVER_URL}/admin-api/login`,
         data
