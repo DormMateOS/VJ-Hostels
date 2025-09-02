@@ -103,14 +103,6 @@ const foodFeedbackSchema = new mongoose.Schema({
         required: true,
         default: Date.now
     },
-    studentId: {
-        type: String,
-        required: true
-    },
-    studentName: {
-        type: String,
-        required: true
-    },
     mealType: {
         type: String,
         enum: ['breakfast', 'lunch', 'dinner', 'snacks'],

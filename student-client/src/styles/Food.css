@@ -18,12 +18,60 @@
 }
 
 .tab-container {
-    display: flex;
-    border-bottom: 1px solid #ddd;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
 }
 
+.tab-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.8rem 0.5rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    height: 100%;
+    min-height: 70px;
+}
+
+.tab-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: #0D6EFD;
+}
+
+.tab-card.active-tab-card {
+    background: linear-gradient(135deg, #0D6EFD 0%, #0056b3 100%);
+    color: white;
+    border-color: #0D6EFD;
+    box-shadow: 0 4px 16px rgba(13, 110, 253, 0.3);
+}
+
+.tab-card.active-tab-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
+}
+
+.tab-icon {
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.tab-text {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.1;
+}
+
+.tab-card.active-tab-card .tab-icon {
+    transform: scale(1.1);
+}
+
+/* Legacy tab styles for backward compatibility */
 .tab {
     padding: 1rem 1.5rem;
     cursor: pointer;
@@ -86,7 +134,19 @@
     background-color: #fff;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    padding: 2rem;
+    padding: 1.5rem;
+    position: relative;
+}
+
+.feedback-form .form-select {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.feedback-form .dropdown-container {
+    position: relative;
+    z-index: 10;
 }
 
 .form-group {
@@ -195,9 +255,18 @@
         padding: 1rem;
     }
 
-    .tab {
-        padding: 0.8rem 1rem;
-        font-size: 0.9rem;
+    .tab-card {
+        padding: 0.7rem 0.4rem;
+        min-height: 65px;
+        gap: 0.3rem;
+    }
+
+    .tab-icon {
+        font-size: 1.1rem;
+    }
+
+    .tab-text {
+        font-size: 0.7rem;
     }
 
     .menu-card, .feedback-form {
@@ -207,9 +276,43 @@
     .food-header h2 {
         font-size: 1.5rem;
     }
+
+    /* Legacy tab styles */
+    .tab {
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
+    }
 }
 
 @media (max-width: 480px) {
+    .food-container {
+        padding: 0.5rem;
+    }
+
+    .tab-card {
+        padding: 0.6rem 0.3rem;
+        min-height: 60px;
+        gap: 0.25rem;
+    }
+
+    .tab-icon {
+        font-size: 1rem;
+    }
+
+    .tab-text {
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+
+    .menu-card, .feedback-form {
+        padding: 1rem;
+    }
+
+    .food-header h2 {
+        font-size: 1.3rem;
+    }
+
+    /* Legacy tab styles */
     .tab-container {
         justify-content: center;
     }
@@ -217,11 +320,5 @@
         flex-grow: 1;
         justify-content: center;
         padding: 0.75rem 0.5rem;
-    }
-    .food-container {
-        padding: 0.5rem;
-    }
-    .menu-card, .feedback-form {
-        padding: 1rem;
     }
 }

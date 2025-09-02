@@ -239,52 +239,124 @@ foodApp.get('/student/menu/today', expressAsyncHandler(async (req, res) => {
 // Submit food feedback
 foodApp.post('/student/feedback', expressAsyncHandler(async (req, res) => {
     try {
-        const { studentId, studentName, mealType, rating, feedback } = req.body;
+        const { mealType, rating, feedback } = req.body;
         
-        // Check if student has already submitted feedback for this meal today
+        // Create new feedback without storing student details
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const existingFeedback = await FoodFeedback.findOne({
-            studentId,
+        const newFeedback = new FoodFeedback({
             mealType,
-            date: {
-                $gte: today,
-                $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-            }
+            rating,
+            feedback,
+            date: today
         });
-        
-        if (existingFeedback) {
-            // Update existing feedback
-            existingFeedback.rating = rating;
-            existingFeedback.feedback = feedback;
-            await existingFeedback.save();
-            res.status(200).json({ message: "Feedback updated successfully", feedback: existingFeedback });
-        } else {
-            // Create new feedback
-            const newFeedback = new FoodFeedback({
-                studentId,
-                studentName,
-                mealType,
-                rating,
-                feedback,
-                date: today
-            });
-            await newFeedback.save();
-            res.status(201).json({ message: "Feedback submitted successfully", feedback: newFeedback });
-        }
+        await newFeedback.save();
+        res.status(201).json({ message: "Feedback submitted successfully", feedback: newFeedback });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }));
 
-// Get student's feedback history
-foodApp.get('/student/feedback/:studentId', expressAsyncHandler(async (req, res) => {
+// Note: Student feedback history endpoint removed since feedback is now anonymous
+
+// Get weekly menu for students with date-based structure
+foodApp.get('/student/menu/weekly-schedule', expressAsyncHandler(async (req, res) => {
     try {
-        const { studentId } = req.params;
-        const feedback = await FoodFeedback.find({ studentId }).sort({ createdAt: -1 });
-        res.status(200).json(feedback);
+        const { WeeklyFoodMenu } = require('../models/FoodModel');
+        
+        // Get current date info
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        
+        // Fetch all weeks for current month
+        const weeklyMenus = await WeeklyFoodMenu.find({
+            month: currentMonth,
+            year: currentYear
+        }).sort({ week: 1 });
+        
+        if (!weeklyMenus.length) {
+            return res.status(404).json({ message: "No menu found for current month" });
+        }
+        
+        // Convert weekly menu to daily schedule format
+        const schedule = [];
+        const today = new Date();
+        
+        // Generate dates for current month
+        for (let day = 1; day <= 31; day++) {
+            const date = new Date(currentYear, currentMonth - 1, day);
+            if (date.getMonth() !== currentMonth - 1) break; // Stop if we've moved to next month
+            
+            const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+            const weekOfMonth = Math.ceil(day / 7);
+            const adjustedWeek = Math.min(weekOfMonth, 4); // Cap at week 4
+            
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = dayNames[dayOfWeek];
+            
+            // Find the appropriate week menu
+            const weekMenu = weeklyMenus.find(w => w.week === adjustedWeek);
+            
+            if (weekMenu && weekMenu.days[dayName]) {
+                const dayMenu = weekMenu.days[dayName];
+                schedule.push({
+                    date: date.toISOString().split('T')[0],
+                    weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
+                    breakfast: dayMenu.breakfast || '',
+                    lunch: dayMenu.lunch || '',
+                    snacks: dayMenu.snacks || '',
+                    dinner: dayMenu.dinner || ''
+                });
+            }
+        }
+        
+        res.status(200).json(schedule);
     } catch (error) {
+        console.error('Error fetching weekly schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Get today's menu from weekly schedule
+foodApp.get('/student/menu/today-from-schedule', expressAsyncHandler(async (req, res) => {
+    try {
+        const { WeeklyFoodMenu } = require('../models/FoodModel');
+        
+        const today = new Date();
+        const currentMonth = today.getMonth() + 1;
+        const currentYear = today.getFullYear();
+        const dayOfMonth = today.getDate();
+        const dayOfWeek = today.getDay();
+        
+        // Calculate which week of the month
+        const weekOfMonth = Math.ceil(dayOfMonth / 7);
+        const adjustedWeek = Math.min(weekOfMonth, 4);
+        
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = dayNames[dayOfWeek];
+        
+        // Find the appropriate week menu
+        const weekMenu = await WeeklyFoodMenu.findOne({
+            month: currentMonth,
+            year: currentYear,
+            week: adjustedWeek
+        });
+        
+        if (!weekMenu || !weekMenu.days[dayName]) {
+            return res.status(404).json({ message: "No menu found for today" });
+        }
+        
+        const todayMenu = {
+            date: today.toISOString().split('T')[0],
+            weekday: today.toLocaleDateString('en-US', { weekday: 'long' }),
+            ...weekMenu.days[dayName]
+        };
+        
+        res.status(200).json(todayMenu);
+    } catch (error) {
+        console.error('Error fetching today\'s menu:', error);
         res.status(500).json({ error: error.message });
     }
 }));

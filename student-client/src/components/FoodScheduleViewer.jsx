@@ -7,10 +7,14 @@ const FoodScheduleViewer = () => {
     const [studentStatus, setStudentStatus] = useState(null);
     const [statusLoading, setStatusLoading] = useState(false);
     const [weekDates, setWeekDates] = useState([]);
+    const [foodSchedule, setFoodSchedule] = useState([]);
+    const [showAllDays, setShowAllDays] = useState(false);
+    const [scheduleLoading, setScheduleLoading] = useState(false);
 
     useEffect(() => {
         if (user?.rollNumber) {
             fetchStudentStatus();
+            fetchFoodSchedule();
             generateWeekDates();
         }
     }, [user?.rollNumber]);
@@ -27,6 +31,19 @@ const FoodScheduleViewer = () => {
         }
     };
 
+    const fetchFoodSchedule = async () => {
+        try {
+            setScheduleLoading(true);
+            const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/weekly-schedule`);
+            setFoodSchedule(response.data);
+        } catch (error) {
+            console.error('Error fetching food schedule:', error);
+            setFoodSchedule([]);
+        } finally {
+            setScheduleLoading(false);
+        }
+    };
+
     const generateWeekDates = () => {
         const dates = [];
         const today = new Date();
@@ -38,6 +55,10 @@ const FoodScheduleViewer = () => {
             dates.push(date.toISOString().split('T')[0]);
         }
         setWeekDates(dates);
+    };
+
+    const getMenuForDate = (dateString) => {
+        return foodSchedule.find(item => item.date === dateString) || null;
     };
 
     const getMealsForDate = (dateString) => {
@@ -121,7 +142,7 @@ const FoodScheduleViewer = () => {
         return 'active';
     };
 
-    if (userLoading || statusLoading || !user) {
+    if (userLoading || statusLoading || scheduleLoading || !user) {
         return (
             <div className="text-center my-4">
                 <div className="spinner-border text-primary" role="status">
@@ -131,6 +152,9 @@ const FoodScheduleViewer = () => {
             </div>
         );
     }
+
+    // Get dates to display (first 3 days or all 7 days)
+    const datesToShow = showAllDays ? weekDates : weekDates.slice(0, 3);
 
     return (
         <div className="food-schedule-viewer">
@@ -142,17 +166,18 @@ const FoodScheduleViewer = () => {
                     </h4>
                 </div>
                 <div className="card-body">
-                    <div className="row g-3">
-                        {weekDates.map((date) => {
+                    <div className="row g-2 g-md-3">
+                        {datesToShow.map((date) => {
                             const meals = getMealsForDate(date);
                             const status = getDateStatus(date);
+                            const dayMenu = getMenuForDate(date);
                             
                             return (
-                                <div key={date} className="col-lg-3 col-md-4 col-sm-6">
+                                <div key={date} className="col-12 col-sm-6 col-lg-4">
                                     <div className={`card h-100 ${status === 'paused' ? 'border-warning' : status === 'last-day' || status === 'return-day' ? 'border-info' : 'border-success'}`}>
-                                        <div className={`card-header text-center ${status === 'paused' ? 'bg-warning text-dark' : status === 'last-day' || status === 'return-day' ? 'bg-info text-white' : 'bg-success text-white'}`}>
-                                            <h6 className="mb-0">{formatDate(date)}</h6>
-                                            <small>
+                                        <div className={`card-header text-center py-2 ${status === 'paused' ? 'bg-warning text-dark' : status === 'last-day' || status === 'return-day' ? 'bg-info text-white' : 'bg-success text-white'}`}>
+                                            <h6 className="mb-0 fs-6">{formatDate(date)}</h6>
+                                            <small className="d-block" style={{ fontSize: '0.7rem' }}>
                                                 {status === 'last-day' && 'Last Day'}
                                                 {status === 'return-day' && 'Return Day'}
                                                 {status === 'paused' && 'Away'}
@@ -160,27 +185,35 @@ const FoodScheduleViewer = () => {
                                             </small>
                                         </div>
                                         <div className="card-body p-2">
-                                            {meals.length > 0 ? (
+                                            {meals.length > 0 && dayMenu ? (
                                                 <div className="meal-schedule">
-                                                    {meals.map((meal) => (
-                                                        <div key={meal} className="d-flex align-items-center mb-2 p-2 bg-light rounded">
-                                                            <span className="me-2">{getMealIcon(meal)}</span>
-                                                            <div className="flex-grow-1">
-                                                                <div className="fw-bold text-capitalize" style={{ fontSize: '0.875rem' }}>
-                                                                    {meal}
+                                                    {meals.map((meal) => {
+                                                        const mealContent = dayMenu[meal];
+                                                        if (!mealContent) return null;
+                                                        
+                                                        return (
+                                                            <div key={meal} className="mb-2 p-2 bg-light rounded" style={{ fontSize: '0.8rem' }}>
+                                                                <div className="d-flex align-items-center mb-1">
+                                                                    <span className="me-2" style={{ fontSize: '0.9rem' }}>{getMealIcon(meal)}</span>
+                                                                    <div className="fw-bold text-capitalize flex-grow-1">
+                                                                        {meal}
+                                                                    </div>
+                                                                    <i className="bi bi-check-circle text-success" style={{ fontSize: '0.8rem' }}></i>
                                                                 </div>
-                                                                <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                                <div className="text-muted mb-1" style={{ fontSize: '0.65rem' }}>
                                                                     {getMealTime(meal)}
                                                                 </div>
+                                                                <div className="text-dark" style={{ fontSize: '0.7rem', lineHeight: '1.2' }}>
+                                                                    {mealContent}
+                                                                </div>
                                                             </div>
-                                                            <i className="bi bi-check-circle text-success"></i>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             ) : (
                                                 <div className="text-center text-muted py-3">
-                                                    <i className="bi bi-x-circle display-6 mb-2"></i>
-                                                    <div>No meals</div>
+                                                    <i className="bi bi-x-circle mb-2" style={{ fontSize: '2rem' }}></i>
+                                                    <div style={{ fontSize: '0.8rem' }}>No meals available</div>
                                                 </div>
                                             )}
                                         </div>
@@ -189,6 +222,28 @@ const FoodScheduleViewer = () => {
                             );
                         })}
                     </div>
+
+                    {/* Show More/Less Button */}
+                    {weekDates.length > 3 && (
+                        <div className="text-center mt-3">
+                            <button 
+                                className="btn btn-outline-primary btn-sm"
+                                onClick={() => setShowAllDays(!showAllDays)}
+                            >
+                                {showAllDays ? (
+                                    <>
+                                        <i className="bi bi-chevron-up me-1"></i>
+                                        Show Less
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="bi bi-chevron-down me-1"></i>
+                                        Show More ({weekDates.length - 3} more days)
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
 
                     {studentStatus?.pause_from && (
                         <div className="mt-4">
@@ -220,23 +275,23 @@ const FoodScheduleViewer = () => {
                     )}
 
                     <div className="mt-3">
-                        <div className="row">
-                            <div className="col-md-3 col-6 mb-2">
+                        <div className="row g-2">
+                            <div className="col-6 col-md-3 mb-2">
                                 <div className="d-flex align-items-center">
-                                    <div className="bg-success rounded me-2" style={{ width: '12px', height: '12px' }}></div>
-                                    <small>Normal Day</small>
+                                    <div className="bg-success rounded me-2" style={{ width: '10px', height: '10px' }}></div>
+                                    <small style={{ fontSize: '0.75rem' }}>Normal Day</small>
                                 </div>
                             </div>
-                            <div className="col-md-3 col-6 mb-2">
+                            <div className="col-6 col-md-3 mb-2">
                                 <div className="d-flex align-items-center">
-                                    <div className="bg-info rounded me-2" style={{ width: '12px', height: '12px' }}></div>
-                                    <small>Special Day</small>
+                                    <div className="bg-info rounded me-2" style={{ width: '10px', height: '10px' }}></div>
+                                    <small style={{ fontSize: '0.75rem' }}>Special Day</small>
                                 </div>
                             </div>
-                            <div className="col-md-3 col-6 mb-2">
+                            <div className="col-6 col-md-3 mb-2">
                                 <div className="d-flex align-items-center">
-                                    <div className="bg-warning rounded me-2" style={{ width: '12px', height: '12px' }}></div>
-                                    <small>Away</small>
+                                    <div className="bg-warning rounded me-2" style={{ width: '10px', height: '10px' }}></div>
+                                    <small style={{ fontSize: '0.75rem' }}>Away</small>
                                 </div>
                             </div>
                         </div>
