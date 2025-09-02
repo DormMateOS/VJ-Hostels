@@ -5,6 +5,7 @@ const { pauseFood, resumeFood, getFoodCount } = require('../controllers/foodCont
 const { calculateAndUpdateFoodCount } = require('../controllers/foodCountController');
 const { googleOAuth, getStudentsByHostel } = require('../controllers/studentFoodController');
 const { wardenLogin, wardenLoginUsingBcrypt } = require('../controllers/wardenFoodController');
+const { getMonthlyMenu, updateDayMenu, getCurrentWeek, updateWeekMenu } = require('../controllers/weeklyMenuController');
 
 // Food pause/resume routes
 router.post('/pause', pauseFood);
@@ -21,5 +22,11 @@ router.get('/students/:hostelId', getStudentsByHostel);
 // Warden authentication routes
 router.post('/warden/login', wardenLogin);
 router.post('/warden/login-bcrypt', wardenLoginUsingBcrypt);
+
+// Weekly menu management routes
+router.get('/menu/monthly', getMonthlyMenu);
+router.put('/menu/day', updateDayMenu);
+router.get('/menu/current-week', getCurrentWeek);
+router.put('/menu/week', updateWeekMenu);
 
 module.exports = router;

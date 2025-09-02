@@ -18,10 +18,12 @@ function RootLayout() {
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth <= 768
-      setIsMobile(mobile)
-      setSidebarOpen(!mobile) // always open on desktop
+      setIsMobile(window.innerWidth <= 768)
+      if (window.innerWidth > 768) {
+        setSidebarOpen(true) // always open on desktop
+      }
     }
+
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
@@ -41,38 +43,26 @@ function RootLayout() {
         backgroundRepeat: 'no-repeat',
       }}
     >
-      {/* Sidebar */}
+      {/* Sidebar (always on desktop, toggle on mobile) */}
       <aside
-        className={`fixed md:fixed top-0 left-0 h-full w-64 bg-red-700 text-white shadow-xl z-50 transform transition-transform duration-300
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        className={`fixed md:static top-0 left-0 h-full md:h-auto w-64 bg-red-700 text-white shadow-lg z-50 transform transition-transform duration-300 
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
           md:translate-x-0`}
       >
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between p-4 border-b border-red-500">
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="VJ Hostels" className="h-8 w-auto" />
-            <h2 className="font-bold text-lg">VJ Hostels</h2>
-          </div>
+        <div className="flex items-center justify-between p-4 border-b border-red-500 md:border-b-0">
+          <h2 className="font-bold text-lg">Menu</h2>
           {isMobile && (
             <button onClick={toggleSidebar}>
               <X size={24} />
             </button>
           )}
         </div>
-
-        {/* Sidebar Nav */}
-        <div className="p-4 overflow-y-auto h-[calc(100%-64px)]">
+        <div className="p-4">
           <Navbar onNavigate={closeSidebar} isDesktop={!isMobile} />
-          <button
-            className="mt-6 w-full bg-white text-red-700 font-semibold px-4 py-2 rounded-lg shadow hover:bg-red-100 transition"
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
         </div>
       </aside>
 
-      {/* Mobile overlay */}
+      {/* Overlay for mobile */}
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 z-40"
@@ -81,11 +71,11 @@ function RootLayout() {
       )}
 
       {/* Main Section */}
-      <div className="flex-1 flex flex-col md:ml-64">
-        {/* Mobile Header */}
-        {isMobile && (
-          <header className="bg-red-700 text-white shadow-md sticky top-0 z-30 flex justify-between items-center px-4 py-3">
-            <div className="flex items-center space-x-3">
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-red-700 text-white shadow-md sticky top-0 z-30 flex justify-between items-center px-4 py-3">
+          <div className="flex items-center space-x-3">
+            {isMobile && (
               <button
                 className="p-2 rounded-md hover:bg-red-600 transition"
                 onClick={toggleSidebar}
@@ -93,19 +83,23 @@ function RootLayout() {
               >
                 <Menu size={24} />
               </button>
+            )}
+            <div className="flex items-center space-x-2">
+              <img src="/logo.png" alt="VJ Hostels" className="h-10 w-auto" />
               <h1 className="text-xl font-bold tracking-wide">VJ Hostels</h1>
             </div>
-            <button
-              className="bg-white text-red-700 font-semibold px-4 py-2 rounded-lg shadow hover:bg-red-100 transition"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
-          </header>
-        )}
+          </div>
+
+          <button
+            className="bg-white text-red-700 font-semibold px-4 py-2 rounded-lg shadow hover:bg-red-100 transition"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </header>
 
         {/* Content */}
-        <main className="flex-1 p-6 overflow-y-auto bg-white bg-opacity-95">
+        <main className="flex-1 p-6 overflow-y-auto bg-white bg-opacity-95 md:ml-64">
           <div className="max-w-6xl mx-auto">
             <Outlet />
           </div>
