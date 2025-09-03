@@ -2,6 +2,8 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const jwt = require("jsonwebtoken");
+const AuthController = require('../controllers/authController');
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 function generateJwt(user) {
   return jwt.sign(
@@ -86,6 +88,12 @@ router.get(
     })(req, res, next);
   }
 );
+
+// OTP System Authentication Routes
+router.post('/guard/login', AuthController.guardLogin);
+router.post('/student/login', AuthController.studentLogin);
+router.post('/warden/login', AuthController.wardenLogin);
+router.get('/verify', authenticateToken, AuthController.verifyToken);
 
 // Logout route
 router.get('/logout', (req, res) => {

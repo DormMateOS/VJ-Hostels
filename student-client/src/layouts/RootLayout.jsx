@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react'
 import Navbar from '../components/Navbar';
 import useCurrentUser from '../hooks/useCurrentUser';
 import DebugAuth from '../components/DebugAuth';
+import VisitorNotification from '../components/VisitorNotification';
 import backgroundImage from '../assets/1.jpg';
 
 function RootLayout() {
@@ -104,6 +105,9 @@ function RootLayout() {
                     </div>
                 </main>
             </div>
+
+            {/* Visitor Notifications */}
+            <VisitorNotification />
         </div>
     )
 }

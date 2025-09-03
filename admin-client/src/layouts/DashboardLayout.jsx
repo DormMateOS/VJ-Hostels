@@ -78,6 +78,12 @@ const DashboardLayout = () => {
                                 {sidebarOpen && <span>Food</span>}
                             </NavLink>
                         </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/visitors" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-people me-3"></i>
+                                {sidebarOpen && <span>Visitors</span>}
+                            </NavLink>
+                        </li>
                         <li className="nav-item mt-4">
                             <NavLink to="/dashboard/profile" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
                                 <i className="bi bi-person-circle me-3"></i>

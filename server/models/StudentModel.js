@@ -47,6 +47,56 @@ const studentSchema = new mongoose.Schema({
     is_active: {
         type: Boolean,
         default: true
+    },
+    room: {
+        type: String,
+        default: null
+    },
+    fcmToken: {
+        type: String,
+        default: null
+    },
+    backupContacts: [{
+        name: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        phone: {
+            type: String,
+            required: true,
+            trim: true
+        }
+    }],
+    whitelist: [{
+        name: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        phone: {
+            type: String,
+            required: true,
+            trim: true
+        }
+    }],
+    autoApproveParents: {
+        type: Boolean,
+        default: false
+    },
+    preferences: {
+        allowVisitorsOutOfHours: {
+            type: Boolean,
+            default: false
+        },
+        requirePhotoVerification: {
+            type: Boolean,
+            default: true
+        },
+        maxVisitorsPerDay: {
+            type: Number,
+            default: 5
+        }
     }
 }, { timestamps: true });
 

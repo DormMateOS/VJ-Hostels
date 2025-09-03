@@ -20,6 +20,7 @@ import Community from './pages/Community';
 import Profile from './pages/Profile';
 import Rooms from './pages/Rooms';
 import Food from './pages/Food';
+import Visitors from './pages/Visitors';
 import AuthHandler from './pages/AuthHandler';
 
 function App() {
@@ -52,6 +53,7 @@ function App() {
         <Route path="outpasses" element={<Outpasses />} />
         <Route path="community" element={<Community />} />
         <Route path="food" element={<Food />} />
+        <Route path="visitors" element={<Visitors />} />
         <Route path="profile" element={<Profile />} />
       </Route>
 
