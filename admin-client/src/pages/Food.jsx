@@ -869,7 +869,7 @@ const Food = () => {
                     )}
 
                     {/* Feedback List */}
-                    <div className="card">
+                    {/* <div className="card">
                         <div className="card-header bg-light">
                             <h5 className="mb-0">Student Feedback</h5>
                         </div>
@@ -890,7 +890,6 @@ const Food = () => {
                                         <thead>
                                             <tr>
                                                 <th>Date</th>
-                                                <th>Student</th>
                                                 <th>Meal</th>
                                                 <th>Rating</th>
                                                 <th>Feedback</th>
@@ -900,7 +899,6 @@ const Food = () => {
                                             {feedback.map(item => (
                                                 <tr key={item._id}>
                                                     <td>{new Date(item.date).toLocaleDateString()}</td>
-                                                    <td>{item.studentName} ({item.studentId})</td>
                                                     <td className="text-capitalize">{item.mealType}</td>
                                                     <td>
                                                         <span className={`badge bg-${getRatingColor(item.rating)}`}>
@@ -917,7 +915,7 @@ const Food = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             )}
 

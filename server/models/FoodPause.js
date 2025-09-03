@@ -26,4 +26,5 @@ const foodPauseSchema = new mongoose.Schema({
     timestamps: true
 });
 
-module.exports = mongoose.model('FoodPause', foodPauseSchema);
+const FoodPause = mongoose.model('FoodPause', foodPauseSchema);
+module.exports = FoodPause;

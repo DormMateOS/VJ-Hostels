@@ -2,6 +2,8 @@ const express = require('express');
 const foodApp = express.Router();
 const expressAsyncHandler = require('express-async-handler');
 const { FoodMenu, FoodFeedback } = require('../models/FoodModel');
+const FoodPause = require('../models/FoodPause');
+const StudentModel = require('../models/StudentModel');
 const { verifyAdmin } = require('../middlewares/verifyToken');
 const { getMonthlyMenu, updateDayMenu, getCurrentWeek, updateWeekMenu } = require('../controllers/weeklyMenuController');
 
@@ -153,6 +155,59 @@ foodApp.get('/admin/feedback/stats', verifyAdmin, expressAsyncHandler(async (req
 }));
 
 // Student API endpoints
+// Handle food service pause requests
+foodApp.post('/pause', expressAsyncHandler(async (req, res) => {
+    try {
+        const { 
+            studentId,       
+            pause_from, 
+            pause_meals, 
+            resume_from, 
+            resume_meals 
+        } = req.body;
+
+        if (!studentId || !pause_from || !pause_meals) {
+            return res.status(400).json({ 
+                message: 'studentId, pause_from, and pause_meals are required' 
+            });
+        }
+
+        // Find student (validation)
+        const student = await StudentModel.findOne({ rollNumber: studentId});
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Update existing FoodPause or create new one if none exists
+        const updatedFoodPause = await FoodPause.findOneAndUpdate(
+            { student_id: student._id }, // match by student reference
+            {
+                $set: {
+                    pause_from,
+                    pause_meals,
+                    resume_from: resume_from || null,
+                    resume_meals: resume_meals || null
+                }
+            },
+            { new: true, upsert: true, runValidators: true } 
+            // new: return updated doc
+            // upsert: create if not exists
+        );
+
+        res.status(200).json({
+            message: 'Food service pause saved successfully',
+            data: updatedFoodPause
+        });
+
+    } catch (error) {
+        console.error('Error saving food pause:', error);
+        res.status(500).json({ 
+            message: 'Failed to save food service pause',
+            error: error.message 
+        });
+    }
+}));
+
 // Get student food pause/resume status
 foodApp.get('/student-status', expressAsyncHandler(async (req, res) => {
     try {
@@ -357,6 +412,76 @@ foodApp.get('/student/menu/today-from-schedule', expressAsyncHandler(async (req,
         res.status(200).json(todayMenu);
     } catch (error) {
         console.error('Error fetching today\'s menu:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Get daily food statistics for admin
+foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        // Total number of students
+        const totalStudents = await StudentModel.countDocuments();
+
+        // Find students who have paused any meal today
+        const pausedStudents = await FoodPause.find({
+            $or: [
+                {
+                    // Paused indefinitely or for a period covering today
+                    pause_from: { $lte: today },
+                    // resume_from: null
+                },
+                // {
+                //     pause_from: { $lte: today },
+                //     resume_from: { $gte: tomorrow }
+                // }
+            ]
+        });
+        // This query implements your exact logic.
+        // await FoodPause.find({
+            
+        //     // Corresponds to: `pause date should be <= today`
+        //     pause_from: { $lte: today },
+            
+        //     // Corresponds to: `and if(reume!=null) resumeDate >= today else directly consider`
+        //     $or: [
+        //         { resume_from: null },             // The 'else directly consider' part
+        //         { resume_from: { $gte: today } }   // The 'if(reume!=null) resumeDate >= today' part
+        //     ]
+
+        // });
+
+        let tiffinPaused = 0;
+        let lunchPaused = 0;
+        let snacksPaused = 0;
+        let dinnerPaused = 0;
+
+        const pausedStudentIds = pausedStudents.map(p => p.student_id.toString());
+
+        for (const pause of pausedStudents) {
+            if (pause.pause_meals.includes('tiffin')) tiffinPaused++;
+            if (pause.pause_meals.includes('lunch')) lunchPaused++;
+            if (pause.pause_meals.includes('snacks')) snacksPaused++;
+            if (pause.pause_meals.includes('dinner')) dinnerPaused++;
+        }
+
+        // Total students taking meals today
+        const totalMealsToday = totalStudents - pausedStudentIds.length;
+
+        res.status(200).json({
+            totalMealsToday,
+            tiffinPaused,
+            lunchPaused,
+            snacksPaused,
+            dinnerPaused
+        });
+        console.log(pausedStudents);
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }));
