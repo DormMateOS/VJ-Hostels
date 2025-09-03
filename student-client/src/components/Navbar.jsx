@@ -1,5 +1,5 @@
 import useCurrentUser from '../hooks/useCurrentUser'
-import { Home, Bell, Users, MessageSquare, LogOut, User, Utensils } from 'lucide-react';
+import { Home, Bell, Users, MessageSquare, LogOut, User, Utensils, UserCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import '../styles/custom.css';
 
@@ -63,6 +63,14 @@ function Navbar({ onNavigate, isDesktop = false }) {
                         label="Food"
                         to="food"
                         isActive={location.pathname.includes('/home/food')}
+                        onClick={handleNavClick}
+                        isDesktop={true}
+                    />
+                    <NavItem
+                        icon={<UserCheck size={18} />}
+                        label="Visitors"
+                        to="visitors"
+                        isActive={location.pathname.includes('/home/visitors')}
                         onClick={handleNavClick}
                         isDesktop={true}
                     />
@@ -134,6 +142,13 @@ function Navbar({ onNavigate, isDesktop = false }) {
                     label="Food"
                     to="food"
                     isActive={location.pathname.includes('/home/food')}
+                    onClick={handleNavClick}
+                />
+                <NavItem
+                    icon={<UserCheck size={20} />}
+                    label="Visitors"
+                    to="visitors"
+                    isActive={location.pathname.includes('/home/visitors')}
                     onClick={handleNavClick}
                 />
             </nav>

@@ -47,7 +47,6 @@ app.use('/student-api', studentApp);
 app.use('/admin-api', adminApp);
 app.use('/message-api', messageApp);
 app.use('/food-api', foodApp);
-app.use('/food-api', foodRoutes);
 app.use('/api/admin/visitors', adminVisitorApp);
 app.use('/api/otp', otpRoutes);
 // app.use('/complaint-api',complaintApp);

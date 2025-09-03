@@ -24,6 +24,7 @@ const DashboardLayout = () => {
     { to: '/dashboard/announcements', icon: 'megaphone', label: 'Announcements' },
     { to: '/dashboard/complaints', icon: 'exclamation-triangle', label: 'Complaints' },
     { to: '/dashboard/outpasses', icon: 'box-arrow-right', label: 'Outpasses' },
+    { to: '/dashboard/visitors', icon: 'people-fill', label: 'Visitors' },
     { to: '/dashboard/community', icon: 'chat-dots', label: 'Community' },
     { to: '/dashboard/food', icon: 'cup-hot', label: 'Food' },
   ];
@@ -82,6 +83,12 @@ const DashboardLayout = () => {
                             </NavLink>
                         </li>
                         <li className="nav-item">
+                            <NavLink to="/dashboard/visitors" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-people-fill me-3"></i>
+                                {sidebarOpen && <span>Visitors</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
                             <NavLink to="/dashboard/community" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
                                 <i className="bi bi-chat-dots me-3"></i>
                                 {sidebarOpen && <span>Community</span>}
@@ -110,7 +117,7 @@ const DashboardLayout = () => {
                         </li>
                     </ul>
                 </div>
-            </div>
+      </nav>
 
       {/* Main content */}
       <div className="flex-grow-1 d-flex flex-column overflow-hidden">
