@@ -9,7 +9,8 @@
     "test:watch": "jest --watch",
     "seed": "node seedData/seedOTPData.js",
     "import:mockusers": "node seedData/importData.js",
-    "allocate:rooms": "node scripts/allocateRooms.js"
+    "allocate:rooms": "node scripts/allocateRooms.js",
+    "seed:food-menu": "node scripts/seedFoodMenuData.js"
   },
   "author": "",
   "license": "ISC",

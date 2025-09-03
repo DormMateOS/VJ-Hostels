@@ -11,7 +11,6 @@ const session = require('express-session');
 require('./config/passport');
 
 const authRoutes = require('./routes/authRoutes');
-const foodRoutes = require('./routes/foodRoutes');
 
 const adminApp = require('./APIs/adminAPI');
 const studentApp = require('./APIs/studentAPI');
