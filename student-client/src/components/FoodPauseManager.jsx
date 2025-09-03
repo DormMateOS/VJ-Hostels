@@ -202,13 +202,13 @@ const FoodPauseManager = () => {
                     )}
 
                     {/* Current Status */}
-                    <div className="mb-4">
+                    {/* <div className="mb-4">
                         <h5>Current Status</h5>
                         <div className={`alert alert-${statusInfo.type === 'active' ? 'success' : statusInfo.type === 'paused' ? 'warning' : 'info'}`}>
                             <i className={`bi bi-${statusInfo.type === 'active' ? 'check-circle' : statusInfo.type === 'paused' ? 'pause-circle' : 'info-circle'} me-2`}></i>
                             {statusInfo.message}
                         </div>
-                    </div>
+                    </div> */}
 
                     {step === 1 && (
                         <div>
