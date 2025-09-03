@@ -20,6 +20,7 @@ import OutpassList from './components/OutpassList.jsx';
 import PostComplaint from './components/PostComplaints.jsx';
 import ComplaintsList from './components/ComplaintsList.jsx';
 import Food from './components/Food.jsx';
+import VisitorManagement from './components/VisitorManagement.jsx';
 import AuthHandler from './components/AuthHandler.jsx';
 
 const browserRouterObj = createBrowserRouter([
@@ -78,6 +79,10 @@ const browserRouterObj = createBrowserRouter([
       {
         path: 'food',
         element: <Food />
+      },
+      {
+        path: 'visitors',
+        element: <VisitorManagement />
       }
     ]
   },

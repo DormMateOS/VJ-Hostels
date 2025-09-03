@@ -24,6 +24,7 @@ const DashboardLayout = () => {
     { to: '/dashboard/announcements', icon: 'megaphone', label: 'Announcements' },
     { to: '/dashboard/complaints', icon: 'exclamation-triangle', label: 'Complaints' },
     { to: '/dashboard/outpasses', icon: 'box-arrow-right', label: 'Outpasses' },
+    { to: '/dashboard/visitors', icon: 'people-fill', label: 'Visitors' },
     { to: '/dashboard/community', icon: 'chat-dots', label: 'Community' },
     { to: '/dashboard/food', icon: 'cup-hot', label: 'Food' },
   ];
@@ -43,46 +44,79 @@ const DashboardLayout = () => {
           </button>
         </div>
 
-        <ul className="nav flex-column sidebar-nav">
-          {menuItems.map(({ to, icon, label }) => (
-            <li className="nav-item" key={to}>
-              <NavLink
-                to={to}
-                end={to === '/dashboard'}
-                className={({ isActive }) =>
-                  `nav-link d-flex align-items-center${isActive ? ' active' : ''}`
-                }
-              >
-                <i className={`bi bi-${icon} icon`}></i>
-                {sidebarOpen && <span className="nav-label">{label}</span>}
-              </NavLink>
-            </li>
-          ))}
-          <li className="nav-item mt-3">
-            <NavLink
-              to="/dashboard/profile"
-              className={({ isActive }) =>
-                `nav-link d-flex align-items-center${isActive ? ' active' : ''}`
-              }
-            >
-              <i className="bi bi-person-circle icon"></i>
-              {sidebarOpen && <span className="nav-label">Profile</span>}
-            </NavLink>
-          </li>
-        </ul>
-
-        {/* Sticky logout */}
-        <div className="logout-container">
-          <button
-            className="nav-link logout-btn d-flex align-items-center w-100 border-0 bg-transparent"
-            onClick={handleLogout}
-            type="button"
-            title="Logout"
-          >
-            <i className="bi bi-box-arrow-left icon"></i>
-            {sidebarOpen && <span className="nav-label">Logout</span>}
-          </button>
-        </div>
+                <div className="p-3">
+                    <ul className="nav flex-column">
+                        <li className="nav-item">
+                            <NavLink to="/dashboard" end className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-speedometer2 me-3"></i>
+                                {sidebarOpen && <span>Dashboard</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/students" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-people me-3"></i>
+                                {sidebarOpen && <span>Students</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/rooms" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-building me-3"></i>
+                                {sidebarOpen && <span>Rooms</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/announcements" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-megaphone me-3"></i>
+                                {sidebarOpen && <span>Announcements</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/complaints" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-exclamation-triangle me-3"></i>
+                                {sidebarOpen && <span>Complaints</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/outpasses" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-box-arrow-right me-3"></i>
+                                {sidebarOpen && <span>Outpasses</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/visitors" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-people-fill me-3"></i>
+                                {sidebarOpen && <span>Visitors</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/community" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-chat-dots me-3"></i>
+                                {sidebarOpen && <span>Community</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item">
+                            <NavLink to="/dashboard/food" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-cup-hot me-3"></i>
+                                {sidebarOpen && <span>Food</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item mt-4">
+                            <NavLink to="/dashboard/profile" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                                <i className="bi bi-person-circle me-3"></i>
+                                {sidebarOpen && <span>Profile</span>}
+                            </NavLink>
+                        </li>
+                        <li className="nav-item mt-3">
+                            <button
+                                className="nav-link logout-btn d-flex align-items-center w-100 border-0 bg-transparent"
+                                onClick={handleLogout}
+                            >
+                                <i className="bi bi-box-arrow-left me-3"></i>
+                                {sidebarOpen && <span>Logout</span>}
+                            </button>
+                        </li>
+                    </ul>
+                </div>
       </nav>
 
       {/* Main content */}

@@ -16,11 +16,13 @@ const adminApp = require('./APIs/adminAPI');
 const studentApp = require('./APIs/studentAPI');
 const messageApp = require('./APIs/messageAPI');
 const foodApp = require('./APIs/foodAPI');
+const adminVisitorApp = require('./APIs/adminVisitorAPI');
+const otpRoutes = require('./routes/otpRoutes');
 // const complaintApp = require('./APIs/complaintAPI');
 
 // middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3101'],
   credentials: true,
 }));
 
@@ -45,6 +47,8 @@ app.use('/student-api', studentApp);
 app.use('/admin-api', adminApp);
 app.use('/message-api', messageApp);
 app.use('/food-api', foodApp);
+app.use('/api/admin/visitors', adminVisitorApp);
+app.use('/api/otp', otpRoutes);
 // app.use('/complaint-api',complaintApp);
 app.use('/auth', authRoutes);
 
@@ -58,6 +62,9 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
+
+// Make io available to routes
+app.set('io', io);
 
 // Socket.IO event handlers
 io.on('connection', (socket) => {

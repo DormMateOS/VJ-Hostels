@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
-import Navbar from '../components/Navbar'
-import useCurrentUser from '../hooks/useCurrentUser'
-import backgroundImage from '../assets/1.jpg'
+import Navbar from '../components/Navbar';
+import useCurrentUser from '../hooks/useCurrentUser';
+import DebugAuth from '../components/DebugAuth';
+import backgroundImage from '../assets/1.jpg';
 
 function RootLayout() {
   const navigate = useNavigate()
@@ -98,15 +99,15 @@ function RootLayout() {
           </button>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 p-6 overflow-y-auto bg-white bg-opacity-95 md:ml-64">
-          <div className="max-w-6xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
-    </div>
-  )
+                {/* Content */}
+                <main className="content-area">
+                    <div className="content-wrapper">
+                        <Outlet />
+                    </div>
+                </main>
+            </div>
+        </div>
+    )
 }
 
 export default RootLayout
