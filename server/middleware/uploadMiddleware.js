@@ -2,35 +2,34 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Create base uploads directory if it doesn't exist
-const baseUploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(baseUploadDir)) {
-  fs.mkdirSync(baseUploadDir, { recursive: true });
-}
+// Use /tmp for Lambda environments, fall back to local path for development
+const baseUploadDir = process.env.AWS_LAMBDA_FUNCTION_NAME
+  ? '/tmp/uploads'
+  : path.join(__dirname, '../uploads');
 
-// Create complaints uploads directory
+// Helper function to create directory safely
+const createDirIfNotExists = (dirPath) => {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+  } catch (error) {
+    console.error(`Error creating directory ${dirPath}:`, error);
+    throw new Error('Failed to create upload directory');
+  }
+};
+
+// Create required directories
+createDirIfNotExists(baseUploadDir);
 const complaintsUploadDir = path.join(baseUploadDir, 'complaints');
-if (!fs.existsSync(complaintsUploadDir)) {
-  fs.mkdirSync(complaintsUploadDir, { recursive: true });
-}
-
-// Create profile photos uploads directory
 const profileUploadDir = path.join(baseUploadDir, 'profiles');
-if (!fs.existsSync(profileUploadDir)) {
-  fs.mkdirSync(profileUploadDir, { recursive: true });
-}
-
-// Create message images uploads directory
 const messageUploadDir = path.join(baseUploadDir, 'messages');
-if (!fs.existsSync(messageUploadDir)) {
-  fs.mkdirSync(messageUploadDir, { recursive: true });
-}
-
-// Create community posts uploads directory
 const communityPostsUploadDir = path.join(baseUploadDir, 'community-posts');
-if (!fs.existsSync(communityPostsUploadDir)) {
-  fs.mkdirSync(communityPostsUploadDir, { recursive: true });
-}
+
+createDirIfNotExists(complaintsUploadDir);
+createDirIfNotExists(profileUploadDir);
+createDirIfNotExists(messageUploadDir);
+createDirIfNotExists(communityPostsUploadDir);
 
 // File filter to only allow image files
 const fileFilter = (req, file, cb) => {
