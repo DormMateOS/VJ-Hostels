@@ -5,15 +5,15 @@ const jwt = require("jsonwebtoken");
 const AuthController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
-function generateJwt(user) {
+function generateJwt(user, role) {
   return jwt.sign(
     {
       id: user._id,
       email: user.email,
-      role: user.role || "student"
+      role: role || user.role
     },
     process.env.JWT_SECRET, 
-    { expiresIn: "1h" }
+    { expiresIn: "24h" }
   );
 }
 
