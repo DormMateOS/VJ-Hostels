@@ -14,15 +14,6 @@ The Hostel Management System consists of three main components:
 
 ### Admin Portal Features
 
-- **Authentication**: Secure admin login system
-- **Dashboard**: Overview of key statistics and recent activities
-- **Student Management**: 
-  - Register, view, and deactivate student accounts
-  - View student details including parent mobile number
-  - Search and filter students by branch, name, room number, phone number, and roll number
-- **Room Management**:
-  - View room occupancy and vacant beds by room type
-  - Automatic room allocation for new students
   - Manual room reassignment capabilities
   - Room vacancy transfers
 - **Outpass Management**: 
