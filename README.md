@@ -6,10 +6,6 @@ A comprehensive web-based solution for managing hostel operations, including stu
 
 The Hostel Management System consists of three main components:
 
-1. **Admin Client**: A web application for hostel administrators to manage all aspects of the hostel
-2. **Student Client**: A web application for students to access hostel services
-3. **Server**: A backend API server that handles data processing, storage, and business logic
-
 ## Features
 
 ### Admin Portal Features
