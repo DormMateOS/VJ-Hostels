@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const Student = require('../models/StudentModel');
 const { uploadProfilePhoto, uploadComplaintImage, uploadCommunityPostImage } = require('../middleware/uploadMiddleware');
-const { verifyStudent } = require('../middlewares/verifyToken');
+const { verifyStudent } = require('../middleware/verifyToken');
 require('dotenv').config();
 
 

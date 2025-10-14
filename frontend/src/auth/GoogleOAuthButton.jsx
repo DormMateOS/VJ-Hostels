@@ -2,13 +2,17 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { config } from "../utils/config.js";
 
-const GoogleOAuthButton = ({ isLoading = false, disabled = false }) => {
+const GoogleOAuthButton = ({ isLoading = false, disabled = false, selectedRole = "" }) => {
   const [isClicked, setIsClicked] = useState(false);
 
   const handleGoogleLogin = () => {
+    if (!selectedRole) {
+      return;
+    }
+    
     setIsClicked(true);
     const API_URL = config.api.baseUrl;
-    window.location.href = `${API_URL}/auth/google`;
+    window.location.href = `${API_URL}/auth/google/${selectedRole}`;
   };
 
   return (

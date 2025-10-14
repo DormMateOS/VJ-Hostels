@@ -4,7 +4,7 @@ const expressAsyncHandler = require('express-async-handler');
 const { FoodMenu, FoodFeedback } = require('../models/FoodModel');
 const FoodPause = require('../models/FoodPause');
 const StudentModel = require('../models/StudentModel');
-const { verifyAdmin } = require('../middlewares/verifyToken');
+const { verifyAdmin } = require('../middleware/verifyToken');
 const { getMonthlyMenu, updateDayMenu, getCurrentWeek, updateWeekMenu } = require('../controllers/weeklyMenuController');
 
 // Admin API endpoints

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import GoogleOAuthButton from "./GoogleOAuthButton";
@@ -8,25 +8,39 @@ import toast from "react-hot-toast";
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [selectedRole, setSelectedRole] = useState("");
 
-  const { isLoading, error, checkAuth, getRoleBasedRoute } = useAuthStore();
+  const { isLoading, error, checkAuth } = useAuthStore();
 
   // Handle OAuth callback
   useEffect(() => {
     const authStatus = searchParams.get("auth");
     const errorParam = searchParams.get("error");
+    const token = searchParams.get("token");
+    const role = searchParams.get("role");
 
-    if (authStatus === "success") {
+    if (authStatus === "success" && token) {
+      // Store token in localStorage
+      localStorage.setItem('auth-token', token);
+      
       toast.success("Successfully logged in with Google!");
-      checkAuth().then(() => {
-        const route = getRoleBasedRoute();
-        navigate(route, { replace: true });
-      });
-    } else if (errorParam === "oauth_failed") {
-      toast.error("Google authentication failed. Please try again.");
+      
+      // Navigate to role-based route
+      setTimeout(() => {
+        if (role === 'student') {
+          navigate('/student', { replace: true });
+        } else if (role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else if (role === 'security') {
+          navigate('/security', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      }, 500);
+    } else if (errorParam) {
+      toast.error("Authentication failed. Please try again.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("auth")]);
+  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 bg-gradient-to-br from-blue-950 via-slate-900 to-black">
@@ -63,15 +77,50 @@ const LoginPage = () => {
         </h2>
 
         <p className="text-gray-300 text-center mb-5">
-          Sign in with your Google account to continue
+          Select your role and sign in with your Google account
         </p>
 
         {error && (
           <p className="text-red-500 font-semibold mb-3 text-center">{error}</p>
         )}
 
+        {/* Role Selection */}
+        <div className="mb-6">
+          <label className="block text-gray-300 text-sm font-medium mb-3">
+            Select Your Role
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'student', label: 'Student', icon: '🎓' },
+              { id: 'admin', label: 'Admin', icon: '👨‍💼' },
+              { id: 'security', label: 'Security', icon: '🛡️' }
+            ].map((role) => (
+              <motion.button
+                key={role.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSelectedRole(role.id)}
+                className={`
+                  p-3 rounded-lg border transition-all duration-200 text-center
+                  ${selectedRole === role.id
+                    ? 'border-blue-400 bg-blue-500/20 text-blue-300'
+                    : 'border-gray-600 bg-gray-700/50 text-gray-300 hover:border-gray-500'
+                  }
+                `}
+              >
+                <div className="text-lg mb-1">{role.icon}</div>
+                <div className="text-sm font-medium">{role.label}</div>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
         {/* Google OAuth Button */}
-        <GoogleOAuthButton isLoading={isLoading} />
+        <GoogleOAuthButton 
+          isLoading={isLoading} 
+          disabled={!selectedRole}
+          selectedRole={selectedRole}
+        />
 
         {/* Inline footer (no box) */}
         <p className="text-sm text-gray-400 text-center mt-4">

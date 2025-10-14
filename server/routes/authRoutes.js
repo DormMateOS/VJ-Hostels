@@ -18,76 +18,65 @@ function generateJwt(user, role) {
 }
 
 
-// Student Google OAuth
-router.get('/google', 
-    passport.authenticate('google-student', { scope: ['profile', 'email'] })
-);
+// Role-based Google OAuth
+router.get('/google/:role', (req, res, next) => {
+  const role = req.params.role;
+  if (!['student', 'admin', 'security'].includes(role)) {
+    return res.redirect(`${process.env.CLIENT_URL}/login?error=invalid_role`);
+  }
+  
+  // Store role in session for callback
+  req.session.selectedRole = role;
+  passport.authenticate(`google-${role}`, { scope: ['profile', 'email'] })(req, res, next);
+});
 
 router.get(
-  '/student/callback',
+  '/callback/:role',
   (req, res, next) => {
-    passport.authenticate('google-student', (err, user, info) => {
+    const role = req.params.role;
+    passport.authenticate(`google-${role}`, (err, user, info) => {
       if (err) {
-        console.error("Authentication error:", err);
+        console.error(`${role} authentication error:`, err);
         return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
       }
 
       if (!user) {
-        console.log("No user found or unauthorized email");
+        console.log(`No ${role} user found or unauthorized email`);
         return res.redirect(`${process.env.CLIENT_URL}/login?error=unauthorized`);
       }
 
       req.logIn(user, (err) => {
         if (err) {
-          console.error("Login error:", err);
+          console.error(`${role} login error:`, err);
           return res.redirect(`${process.env.CLIENT_URL}/login?error=login_failed`);
         }
 
-        console.log("Successful login for user:", user);
-        const token = generateJwt(user);
+        console.log(`Successful ${role} login for user:`, user);
+        const token = generateJwt(user, role);
 
-        // Redirect with token as URL parameter for frontend to handle
-        return res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+        // Redirect to role-specific route
+        return res.redirect(`${process.env.CLIENT_URL}/?auth=success&token=${token}&role=${role}`);
       });
     })(req, res, next);
   }
 );
 
 
-// Admin Google OAuth
-router.get('/google/admin', 
-    passport.authenticate('google-admin', { scope: ['profile', 'email'] })
-);
-
-router.get(
-  '/admin/callback',
-  (req, res, next) => {
-    passport.authenticate('google-admin', (err, user, info) => {
-      if (err) {
-        console.error("Admin authentication error:", err);
-        return res.redirect(`${process.env.ADMIN_CLIENT_URL || 'http://localhost:5174'}/login?error=auth_failed`);
-      }
-
-      if (!user) {
-        console.log("No admin user found or unauthorized email");
-        return res.redirect(`${process.env.ADMIN_CLIENT_URL || 'http://localhost:5174'}/login?error=unauthorized`);
-      }
-
-      req.logIn(user, (err) => {
-        if (err) {
-          console.error("Admin login error:", err);
-          return res.redirect(`${process.env.ADMIN_CLIENT_URL || 'http://localhost:5174'}/login?error=login_failed`);
-        }
-
-        console.log("Successful admin login for user:", user);
-        const token = generateJwt(user);
-
-        // Redirect with token and admin email as URL parameters for frontend to handle
-        return res.redirect(`${process.env.ADMIN_CLIENT_URL || 'http://localhost:5174'}/auth/callback?token=${token}&admin=${encodeURIComponent(user.email)}`);
-      });
-    })(req, res, next);
+// Check authentication status
+router.get('/check-auth', authenticateToken, (req, res) => {
+  try {
+    res.json({
+      success: true,
+      user: req.user,
+      role: req.user.role
+    });
+  } catch (error) {
+    res.status(401).json({
+      success: false,
+      message: 'Not authenticated'
+    });
   }
-);
+});
 
 // OTP System Authentication Routes
 router.post('/guard/login', AuthController.guardLogin);
