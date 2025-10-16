@@ -17,26 +17,26 @@ import VisitorManagement from '../components/student/VisitorManagement';
 
 function StudentPage() {
   return (
-    <StudentLayout>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/announcements" element={<Announcement />} />
-        <Route path="/announcements/today" element={<TodayAnnouncements />} />
-        <Route path="/announcements/all" element={<AllAnnouncements />} />
-        <Route path="/community" element={<Community />} />
-        <Route path="/complaints" element={<Complaints />} />
-        <Route path="/complaints/complaint" element={<PostComplaint />} />
-        <Route path="/complaints/complaint-list" element={<ComplaintsList />} />
-        <Route path="/outpass" element={<OutpassPage />} />
-        <Route path="/outpass/apply-outpass" element={<Outpass />} />
-        <Route path="/outpass/outpass-history" element={<OutpassList />} />
-        <Route path="/profile" element={<StudentProfile />} />
-        <Route path="/food" element={<Food />} />
-        <Route path="/visitors" element={<VisitorManagement />} />
-        <Route path="*" element={<Navigate to="/student" replace />} />
-      </Routes>
-    </StudentLayout>
+    <Routes>
+      <Route path="/" element={<StudentLayout />}>
+        <Route index element={<Home />} />
+        <Route path="home" element={<Home />} />
+        <Route path="announcements" element={<Announcement />} />
+        <Route path="announcements/today" element={<TodayAnnouncements />} />
+        <Route path="announcements/all" element={<AllAnnouncements />} />
+        <Route path="community" element={<Community />} />
+        <Route path="complaints" element={<Complaints />} />
+        <Route path="complaints/complaint" element={<PostComplaint />} />
+        <Route path="complaints/complaint-list" element={<ComplaintsList />} />
+        <Route path="outpass" element={<OutpassPage />} />
+        <Route path="outpass/apply-outpass" element={<Outpass />} />
+        <Route path="outpass/outpass-history" element={<OutpassList />} />
+        <Route path="profile" element={<StudentProfile />} />
+        <Route path="food" element={<Food />} />
+        <Route path="visitors" element={<VisitorManagement />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/student" replace />} />
+    </Routes>
   );
 }
 

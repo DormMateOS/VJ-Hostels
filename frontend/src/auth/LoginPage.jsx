@@ -21,7 +21,7 @@ const LoginPage = () => {
 
     if (authStatus === "success" && token) {
       // Store token in localStorage
-      localStorage.setItem('auth-token', token);
+      localStorage.setItem('token', token);
       
       toast.success("Successfully logged in with Google!");
       

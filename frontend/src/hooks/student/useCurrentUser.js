@@ -16,6 +16,7 @@ const useCurrentUser = (options = {}) => {
     const [user, setUser] = useState(userCache);
     const [loading, setLoading] = useState(!userCache);
     const [error, setError] = useState(null);
+    const [hasCheckedToken, setHasCheckedToken] = useState(false);
     const abortControllerRef = useRef(null);
 
     const fetchCurrentUser = useCallback(async (forceRefresh = false) => {
@@ -39,6 +40,7 @@ const useCurrentUser = (options = {}) => {
             setUser(null);
             setLoading(false);
             setError(null);
+            setHasCheckedToken(true);
             userCache = null;
             cacheTimestamp = null;
             return;
@@ -82,6 +84,7 @@ const useCurrentUser = (options = {}) => {
             const userData = response.data;
             console.log('useCurrentUser: User data received:', userData);
             setUser(userData);
+            setHasCheckedToken(true);
 
             // Update cache
             if (enableCache) {
@@ -104,9 +107,11 @@ const useCurrentUser = (options = {}) => {
                 setUser(null);
                 userCache = null;
                 cacheTimestamp = null;
+                setHasCheckedToken(true);
                 setError('Session expired. Please login again.');
             } else {
                 setError(errorMessage);
+                setHasCheckedToken(true);
             }
 
             // Call custom error handler if provided
@@ -121,10 +126,10 @@ const useCurrentUser = (options = {}) => {
 
     // Fetch user data on mount and when token changes
     useEffect(() => {
-        if (refetchOnMount || !userCache) {
+        if (!hasCheckedToken && (refetchOnMount || !userCache)) {
             fetchCurrentUser();
         }
-    }, [fetchCurrentUser, refetchOnMount]);
+    }, [hasCheckedToken, refetchOnMount]); // Remove fetchCurrentUser from deps to prevent infinite loop
 
     // Cleanup abort controller on unmount
     useEffect(() => {
@@ -145,6 +150,7 @@ const useCurrentUser = (options = {}) => {
         setUser(null);
         setError(null);
         setLoading(false);
+        setHasCheckedToken(false); // Reset flag so it can check for token again
         localStorage.removeItem('token');
         userCache = null;
         cacheTimestamp = null;
