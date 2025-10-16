@@ -54,7 +54,7 @@ const otpSchema = new mongoose.Schema({
   },
   createdByGuardId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin',
+    ref: 'Guard',
     required: true
   },
   groupSize: {

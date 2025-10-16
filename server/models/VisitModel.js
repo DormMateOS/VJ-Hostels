@@ -18,8 +18,13 @@ const visitSchema = new mongoose.Schema({
   },
   guardId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Admin',
+    ref: 'Guard',  // Changed from Admin to Guard
     required: true
+  },
+  checkoutGuardId: {  // Add field to track who checked out the visitor
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Guard',
+    default: null
   },
   entryAt: {
     type: Date,
@@ -79,9 +84,29 @@ const visitSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'completed'],
+    enum: ['active', 'completed', 'cancelled'],  // Added cancelled status
     default: 'active'
-  }
+  },
+  cancelledReason: {  // Add field for cancellation reason
+    type: String,
+    default: null
+  },
+  // Add audit trail for visit status changes
+  statusHistory: [{
+    status: {
+      type: String,
+      enum: ['active', 'completed', 'cancelled']
+    },
+    guardId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Guard'
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    notes: String
+  }]
 }, {
   timestamps: true
 });
@@ -91,5 +116,9 @@ visitSchema.index({ studentId: 1, entryAt: -1 });
 visitSchema.index({ guardId: 1, entryAt: -1 });
 visitSchema.index({ visitorPhone: 1, entryAt: -1 });
 visitSchema.index({ status: 1, entryAt: -1 });
+
+// Add new indexes for guard-related queries
+visitSchema.index({ guardId: 1, status: 1 });
+visitSchema.index({ checkoutGuardId: 1, exitAt: -1 });
 
 module.exports = mongoose.model('Visit', visitSchema);

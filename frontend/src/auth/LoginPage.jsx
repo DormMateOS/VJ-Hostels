@@ -20,23 +20,23 @@ const LoginPage = () => {
     const role = searchParams.get("role");
 
     if (authStatus === "success" && token) {
-      // Store token in localStorage
-      localStorage.setItem('token', token);
+      // Store role-specific token
+      if (role === 'security') {
+        localStorage.setItem('guard_token', token);
+      } else {
+        localStorage.setItem('token', token);
+      }
       
       toast.success("Successfully logged in with Google!");
       
-      // Navigate to role-based route
-      setTimeout(() => {
-        if (role === 'student') {
-          navigate('/student', { replace: true });
-        } else if (role === 'admin') {
-          navigate('/admin', { replace: true });
-        } else if (role === 'security') {
-          navigate('/security', { replace: true });
-        } else {
-          navigate('/dashboard', { replace: true });
-        }
-      }, 500);
+      // Navigate immediately without timeout
+      if (role === 'security') {
+        navigate('/security', { replace: true });
+      } else if (role === 'student') {
+        navigate('/student', { replace: true });
+      } else if (role === 'admin') {
+        navigate('/admin', { replace: true });
+      }
     } else if (errorParam) {
       toast.error("Authentication failed. Please try again.");
     }
