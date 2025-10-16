@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import { Toaster } from 'react-hot-toast';
 import LoginPage from './auth/LoginPage';
 import StudentPage from './pages/StudentPage';
@@ -29,7 +30,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           
           {/* Role-based routes */}
-          <Route path="/student" element={<StudentPage />} />
+          <Route path="/student/*" element={<StudentPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/security" element={<SecurityPage />} />
           

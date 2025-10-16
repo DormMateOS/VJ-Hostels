@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import AdminLayout from '../components/layouts/AdminLayout';
+import AdminLayout from '../layouts/AdminLayout';
 
 const AdminPage = () => {
   return (
