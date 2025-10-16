@@ -1,0 +1,91 @@
+// TodayAnnouncements.jsx
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+const TodayAnnouncements = () => {
+    const [todayAnnouncements, setTodayAnnouncements] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [expandedAnnouncements, setExpandedAnnouncements] = useState(new Set());
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        const fetchTodayAnnouncements = async () => {
+            try {
+                setLoading(true);
+                const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/student-api/announcements`);
+                setTodayAnnouncements(response.data);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching today\'s announcements:', error);
+                setError('Failed to load today\'s announcements');
+                setLoading(false);
+            }
+        };
+
+        fetchTodayAnnouncements();
+    }, []);
+
+    // Helper function to check if text needs truncation (approximately 3 lines = 200 characters)
+    const shouldTruncate = (text) => text.length > 200;
+
+    // Helper function to truncate text to 3 lines
+    const truncateText = (text, maxLength = 200) => {
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength).trim() + '...';
+    };
+
+    const handleReadMore = (announcementId) => {
+        const newExpanded = new Set(expandedAnnouncements);
+        if (newExpanded.has(announcementId)) {
+            newExpanded.delete(announcementId);
+        } else {
+            newExpanded.add(announcementId);
+        }
+        setExpandedAnnouncements(newExpanded);
+    };
+
+    if (loading) return <p style={{ textAlign: 'center' }}>Loading...</p>;
+    if (error) return <p style={{ textAlign: 'center', color: 'red' }}>{error}</p>;
+
+    return (
+        <div className="announcements-list">
+            {todayAnnouncements.length > 0 ? (
+                todayAnnouncements.map((announcement) => {
+                    const isExpanded = expandedAnnouncements.has(announcement._id);
+                    const needsTruncation = shouldTruncate(announcement.description);
+                    
+                    return (
+                        <div key={announcement._id} className="announcement-card">
+                            <div className="announcement-card-body">
+                                <h5 className="announcement-card-title">{announcement.title}</h5>
+                                <p className="announcement-card-text">
+                                    {isExpanded || !needsTruncation 
+                                        ? announcement.description 
+                                        : truncateText(announcement.description)
+                                    }
+                                </p>
+                                {needsTruncation && (
+                                    <button 
+                                        className="read-more-btn"
+                                        onClick={() => handleReadMore(announcement._id)}
+                                    >
+                                        {isExpanded ? 'Read Less' : 'Read More'}
+                                    </button>
+                                )}
+                                <small className="announcement-card-date">
+                                    Posted at: {new Date(announcement.createdAt).toLocaleString()}
+                                </small>
+                            </div>
+                        </div>
+                    );
+                })
+            ) : (
+                <p className="no-announcements">No announcements for today.</p>
+            )}
+        </div>
+    );
+};
+
+export default TodayAnnouncements;

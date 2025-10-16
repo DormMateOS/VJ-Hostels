@@ -11,7 +11,7 @@ axios.defaults.withCredentials = true;
 // Add request interceptor to include auth token
 axios.interceptors.request.use(
 	(config) => {
-		const token = localStorage.getItem('auth-token');
+		const token = localStorage.getItem('token');
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
@@ -28,7 +28,7 @@ axios.interceptors.response.use(
 	async (error) => {
 		if (error.response?.status === 401) {
 			// Clear invalid token
-			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
 			delete axios.defaults.headers.common['Authorization'];
 		}
 		return Promise.reject(error);
@@ -122,7 +122,7 @@ export const useAuthStore = create((set, get) => ({
 			await axios.post(`${API_URL}/logout`);
 			
 			// Clear local storage
-			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
 			delete axios.defaults.headers.common['Authorization'];
 			
 			set({
@@ -135,7 +135,7 @@ export const useAuthStore = create((set, get) => ({
 			handleSuccess("Logged out successfully");
 		} catch (error) {
 			// Even if logout fails on server, clear local state
-			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
 			delete axios.defaults.headers.common['Authorization'];
 			
 			set({
@@ -181,10 +181,10 @@ export const useAuthStore = create((set, get) => ({
 			console.log('Making request to:', `${API_URL}/check-auth`);
 			console.log('Axios withCredentials:', axios.defaults.withCredentials);
 			console.log('Authorization header:', axios.defaults.headers.common['Authorization'] ? 'Set' : 'Not set');
-			console.log('LocalStorage token:', localStorage.getItem('auth-token') ? 'Present' : 'Missing');
+			console.log('LocalStorage token:', localStorage.getItem('token') ? 'Present' : 'Missing');
 
 			// Ensure Authorization header is set if we have a token
-			const token = localStorage.getItem('auth-token');
+			const token = localStorage.getItem('token');
 			if (token && !axios.defaults.headers.common['Authorization']) {
 				axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 				console.log('🔑 Authorization header set from localStorage');
@@ -210,7 +210,7 @@ export const useAuthStore = create((set, get) => ({
 			console.log('=========================');
 
 			// Clear invalid token
-			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
 			delete axios.defaults.headers.common['Authorization'];
 
 			clearTimeout(timeoutId);
