@@ -13,21 +13,27 @@ class OTPUtils {
     return otp;
   }
 
-  static async hashOTP(otp, visitorPhone) {
-    const secret = process.env.OTP_SECRET || 'default-otp-secret';
-    const data = `${otp}:${visitorPhone}`;
-    
-    // Use HMAC-SHA256 for OTP hashing
-    const hash = crypto.createHmac('sha256', secret)
-                      .update(data)
-                      .digest('hex');
-    
-    return hash;
+  static async hashOTP(otp, phone) {
+    try {
+      const sanitizedPhone = this.sanitizePhoneNumber(phone);
+      const combined = `${otp}:${sanitizedPhone}`;
+      const salt = await bcrypt.genSalt(10);
+      return bcrypt.hash(combined, salt);
+    } catch (error) {
+      console.error('OTP hash error:', error);
+      throw error;
+    }
   }
 
-  static async verifyOTP(providedOTP, visitorPhone, storedHash) {
-    const computedHash = await this.hashOTP(providedOTP, visitorPhone);
-    return computedHash === storedHash;
+  static async verifyOTP(providedOtp, phone, otpHash) {
+    try {
+      const sanitizedPhone = this.sanitizePhoneNumber(phone);
+      const combined = `${providedOtp}:${sanitizedPhone}`;
+      return bcrypt.compare(combined, otpHash);
+    } catch (error) {
+      console.error('OTP verify error:', error);
+      return false;
+    }
   }
 
   static isOTPExpired(expiresAt) {
@@ -47,20 +53,9 @@ class OTPUtils {
   }
 
   static sanitizePhoneNumber(phone) {
-    // Remove all non-digit characters and ensure it starts with country code
-    const cleaned = phone.replace(/\D/g, '');
-    
-    // If it's a 10-digit number, assume it's Indian and add +91
-    if (cleaned.length === 10) {
-      return `+91${cleaned}`;
-    }
-    
-    // If it already has country code, ensure it starts with +
-    if (cleaned.length > 10 && !cleaned.startsWith('+')) {
-      return `+${cleaned}`;
-    }
-    
-    return cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
+    if (!phone) return '';
+    // Remove all non-digit characters
+    return phone.replace(/\D/g, '');
   }
 
   static validatePhoneNumber(phone) {

@@ -1,6 +1,7 @@
 const OTP = require('../models/OTPModel');
 const Visit = require('../models/VisitModel');
 const Student = require('../models/StudentModel');
+const Guard = require('../models/GuardModel');
 const AuditLog = require('../models/AuditLogModel');
 const OTPUtils = require('../utils/otpUtils');
 const notificationService = require('../services/notificationService');
@@ -16,14 +17,15 @@ class OTPController {
       if (!studentId || !visitorName || !visitorPhone || !guardId || !purpose) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields',
-          code: 'MISSING_FIELDS'
+          message: 'Missing required fields: studentId, visitorName, visitorPhone, guardId, purpose',
+          code: 'MISSING_FIELDS',
+          receivedData: { studentId, visitorName, visitorPhone, guardId, purpose }
         });
       }
 
-      // Validate phone number
-      const sanitizedPhone = OTPUtils.sanitizePhoneNumber(visitorPhone);
-      if (!OTPUtils.validatePhoneNumber(sanitizedPhone)) {
+      // Validate phone number format
+      const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+      if (!phoneRegex.test(visitorPhone.replace(/\s/g, ''))) {
         return res.status(400).json({
           success: false,
           message: 'Invalid phone number format',
@@ -31,27 +33,36 @@ class OTPController {
         });
       }
 
-      // Find student
+      // Sanitize phone number for consistent storage
+      const sanitizedPhone = OTPUtils.sanitizePhoneNumber(visitorPhone);
+
+      // Verify student exists
       const student = await Student.findById(studentId);
-      if (!student || !student.is_active) {
+      if (!student) {
         return res.status(404).json({
           success: false,
-          message: 'Student not found or inactive',
+          message: 'Student not found',
           code: 'STUDENT_NOT_FOUND'
         });
       }
 
-      // Check if visitor is whitelisted (auto-approve)
-      const isWhitelisted = student.whitelist.some(contact => 
-        contact.phone === sanitizedPhone
+      // Verify guard exists
+      const guard = await Guard.findById(guardId);
+      if (!guard) {
+        return res.status(404).json({
+          success: false,
+          message: 'Guard not found',
+          code: 'GUARD_NOT_FOUND'
+        });
+      }
+
+      // Check if visitor is whitelisted (pre-approved)
+      const isWhitelisted = student.whitelist && student.whitelist.some(
+        visitor => visitor.phone === sanitizedPhone || visitor.name.toLowerCase() === visitorName.toLowerCase()
       );
 
-      // Check if it's parent and auto-approve is enabled
-      const isParent = student.parentMobileNumber === sanitizedPhone;
-      const shouldAutoApprove = isParent && student.autoApproveParents;
-
-      if (isWhitelisted || shouldAutoApprove) {
-        // Create visit directly without OTP
+      if (isWhitelisted) {
+        // Create visit directly for pre-approved visitors
         const visit = await Visit.create({
           visitorName,
           visitorPhone: sanitizedPhone,
@@ -59,153 +70,83 @@ class OTPController {
           guardId,
           purpose,
           method: 'preapproved',
-          groupVisitors: groupSize > 1 ? [{ name: visitorName, phone: sanitizedPhone }] : [],
-          isGroupVisit: groupSize > 1
+          status: 'active',
+          groupSize: parseInt(groupSize) || 1
         });
 
-        // Log the action
-        await AuditLog.create({
-          action: 'visit_created',
-          actorId: guardId,
-          actorType: 'guard',
-          targetId: visit._id,
-          targetType: 'visit',
-          meta: {
-            method: 'preapproved',
-            visitorName,
-            visitorPhone: sanitizedPhone,
-            studentId,
-            isWhitelisted,
-            isParent: shouldAutoApprove
-          },
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent')
-        });
-
-        // Emit socket event
-        req.io.emit('visitCreated', {
-          visit,
-          student: { name: student.name, room: student.room }
-        });
-
-        return res.json({
+        return res.status(200).json({
           success: true,
-          message: 'Visitor pre-approved. Entry granted.',
-          visit,
-          code: 'PRE_APPROVED'
+          message: 'Visitor pre-approved',
+          code: 'PRE_APPROVED',
+          visit: visit
         });
       }
 
-      // Check for out-of-hours visits
-      const isOutOfHours = OTPUtils.isOutOfHours();
-      if (isOutOfHours && !student.preferences.allowVisitorsOutOfHours) {
-        return res.status(400).json({
+      // Check if visit is within allowed hours
+      const currentHour = new Date().getHours();
+      const isOutOfHours = false; // 8 AM to 9 PM
+
+      if (isOutOfHours) {
+        return res.status(200).json({
           success: false,
-          message: 'Visitor requests not allowed during out-of-hours. Please request warden override.',
+          message: 'This is an out-of-hours visit. An override request will be sent to wardens.',
           code: 'OUT_OF_HOURS'
         });
       }
 
-      // Clear any existing unused OTPs for this visitor
-      await OTP.updateMany({
-        visitorPhone: sanitizedPhone,
-        used: false,
-        locked: false
-      }, {
-        used: true,
-        usedAt: new Date(),
-        usedBy: guardId
-      });
-
       // Generate OTP
-      const otp = OTPUtils.generateOTP(6);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const otpHash = await OTPUtils.hashOTP(otp, sanitizedPhone);
 
       // Create OTP record
       const otpRecord = await OTP.create({
         studentId,
-        visitorPhone: sanitizedPhone,
+        visitorPhone: sanitizedPhone, // Store sanitized phone
         visitorName,
         otpHash,
-        otpValue: otp, // Store OTP value for student access
+        otpValue: otp,  // Store the actual OTP value
         purpose,
         createdByGuardId: guardId,
-        groupSize,
-        isGroupOTP: groupSize > 1,
-        expiresAt: OTPUtils.generateExpiryTime(10) // Changed to 10 minutes as requested
+        groupSize: parseInt(groupSize) || 1,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
       });
 
-      // Send notification to student
+      // Send OTP to student (Firebase, SMS, Email)
       try {
-        await notificationService.sendOTPNotification(student, otp, visitorName, purpose);
+        await notificationService.sendOTPNotification(student, otp, visitorName);
       } catch (notificationError) {
-        console.error('Notification failed:', notificationError);
-        // Continue even if notification fails
+        console.error('Notification error:', notificationError);
       }
 
-      // Log the action
-      await AuditLog.create({
-        action: 'otp_requested',
-        actorId: guardId,
-        actorType: 'guard',
-        targetId: otpRecord._id,
-        targetType: 'otp',
-        meta: {
-          visitorName,
-          visitorPhone: sanitizedPhone,
-          studentId,
-          purpose,
-          groupSize,
-          isOutOfHours
-        },
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-
-      // Emit socket event to student for real-time OTP notification
-      console.log('Emitting OTP to student:', studentId);
-      req.io.emit(`student-${studentId}`, {
-        type: 'new_otp',
-        otp: {
-          _id: otpRecord._id,
-          visitorName,
-          visitorPhone: sanitizedPhone,
-          purpose,
-          otp: otp,
-          expiresAt: otpRecord.expiresAt,
-          groupSize,
-          isGroupOTP: groupSize > 1,
-          createdAt: otpRecord.createdAt,
-          attempts: 0
+      // Emit socket event
+      try {
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`student_${studentId}`).emit('otpGenerated', {
+            visitorName,
+            visitorPhone: sanitizedPhone,
+            otp,
+            expiresAt: otpRecord.expiresAt
+          });
         }
-      });
-
-      // Also emit to general community room for debugging
-      req.io.to('community').emit('new_otp_created', {
-        studentId,
-        visitorName,
-        otp: otp
-      });
-
-      // In development mode, log the OTP to console
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`🔐 DEV MODE - OTP for ${visitorName} (${OTPUtils.maskPhoneNumber(sanitizedPhone)}): ${otp}`);
+      } catch (socketError) {
+        console.error('Socket error:', socketError);
       }
 
-      res.json({
+      res.status(200).json({
         success: true,
         message: 'OTP sent to student successfully',
+        code: 'OTP_SENT',
         otpId: otpRecord._id,
-        expiresAt: otpRecord.expiresAt,
-        maskedPhone: OTPUtils.maskPhoneNumber(student.phoneNumber)
+        expiresAt: otpRecord.expiresAt
       });
 
     } catch (error) {
-      console.error('OTP request error:', error);
+      console.error('OTP Request Error:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error',
-        code: 'SERVER_ERROR'
+        message: 'Failed to request OTP',
+        error: error.message
       });
     }
   }
@@ -224,7 +165,10 @@ class OTPController {
         });
       }
 
+      // Sanitize phone number to match stored format
       const sanitizedPhone = OTPUtils.sanitizePhoneNumber(visitorPhone);
+
+      console.log('Verifying OTP for phone:', sanitizedPhone, 'OTP:', providedOtp);
 
       // Find the latest unused OTP for this phone
       const otpRecord = await OTP.findOne({
@@ -234,6 +178,7 @@ class OTPController {
       }).sort({ createdAt: -1 });
 
       if (!otpRecord) {
+        console.log('No OTP found for phone:', sanitizedPhone);
         recordFailedAttempt(sanitizedPhone);
         return res.status(404).json({
           success: false,

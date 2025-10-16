@@ -34,34 +34,81 @@ const authenticateToken = (req, res, next) => {
 // Guard authentication middleware
 const authenticateGuard = async (req, res, next) => {
   try {
-    await authenticateToken(req, res, async () => {
-      if (req.user.role !== 'guard') {
-        return res.status(403).json({
-          success: false,
-          message: 'Guard access required',
-          code: 'GUARD_ACCESS_REQUIRED'
-        });
-      }
+    const token = req.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided',
+        code: 'NO_TOKEN'
+      });
+    }
 
-      // Verify guard exists and is active
-      const guard = await Guard.findById(req.user.id);
-      if (!guard || !guard.isActive) {
-        return res.status(403).json({
-          success: false,
-          message: 'Guard account not found or inactive',
-          code: 'GUARD_INACTIVE'
-        });
-      }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    // Handle different token payload formats
+    const guardId = decoded._id || decoded.id || decoded.guardId;
+    
+    if (!guardId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token format',
+        code: 'INVALID_TOKEN_FORMAT'
+      });
+    }
 
-      req.guard = guard;
-      next();
-    });
+    // Fetch guard from database
+    const guard = await Guard.findById(guardId);
+    
+    if (!guard) {
+      return res.status(401).json({
+        success: false,
+        message: 'Guard not found',
+        code: 'GUARD_NOT_FOUND'
+      });
+    }
+
+    if (!guard.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Guard account is inactive',
+        code: 'GUARD_INACTIVE'
+      });
+    }
+
+    // Attach guard and user info to request
+    req.user = {
+      id: guard._id,
+      _id: guard._id,
+      role: 'guard',
+      email: guard.email,
+      name: guard.name
+    };
+    req.guard = guard;
+    
+    next();
   } catch (error) {
-    console.error('Guard authentication error:', error);
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+
+    console.error('Auth middleware error:', error);
     res.status(500).json({
       success: false,
-      message: 'Authentication error',
-      code: 'AUTH_ERROR'
+      message: 'Authentication failed',
+      error: error.message
     });
   }
 };

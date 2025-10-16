@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Table, Badge, Button, Modal, Form } from 'react-bootstrap';
-import { Eye, Users, Clock, Calendar, Search, Filter, Download} from 'lucide-react';
+import { Card, Row, Col, Table, Badge, Button, Modal, Form, Alert } from 'react-bootstrap';
+import { Eye, Users, Clock, Calendar, Search, Filter, Download, AlertCircle } from 'lucide-react';
 import {FiRefreshCcw} from 'react-icons/fi';
 import axios from 'axios';
 
 const Visitors = () => {
   const [activeVisitors, setActiveVisitors] = useState([]);
   const [visitHistory, setVisitHistory] = useState([]);
+  const [pendingOverrides, setPendingOverrides] = useState([]);
   const [stats, setStats] = useState({
     totalVisitors: 0,
     activeVisitors: 0,
     todayVisitors: 0,
-    thisWeekVisitors: 0
+    thisWeekVisitors: 0,
+    pendingOverrides: 0
   });
   const [loading, setLoading] = useState(true);
   const [selectedVisit, setSelectedVisit] = useState(null);
+  const [selectedOverride, setSelectedOverride] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [overrideDecision, setOverrideDecision] = useState('');
+  const [overrideNotes, setOverrideNotes] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [dateVisitors, setDateVisitors] = useState([]);
+  const [processingOverride, setProcessingOverride] = useState(false);
 
   useEffect(() => {
     loadVisitorData();
@@ -33,7 +40,7 @@ const Visitors = () => {
   const loadVisitorData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
       
       // Load active visitors
       const activeResponse = await axios.get('/api/admin/visitors/active', {
@@ -45,8 +52,17 @@ const Visitors = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
+      // Load pending overrides
+      const overridesResponse = await axios.get('/api/otp/override/pending', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
       setActiveVisitors(activeResponse.data.visitors || []);
-      setStats(statsResponse.data.stats || {});
+      setStats({
+        ...statsResponse.data.stats || {},
+        pendingOverrides: overridesResponse.data.count || 0
+      });
+      setPendingOverrides(overridesResponse.data.requests || []);
     } catch (error) {
       console.error('Error loading visitor data:', error);
     } finally {
@@ -56,7 +72,7 @@ const Visitors = () => {
 
   const loadDateVisitors = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
       const response = await axios.get(`/api/admin/visitors/by-date?date=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -65,6 +81,45 @@ const Visitors = () => {
     } catch (error) {
       console.error('Error loading date visitors:', error);
       setDateVisitors([]);
+    }
+  };
+
+  const handleProcessOverride = async () => {
+    if (!overrideDecision) {
+      alert('Please select approve or reject');
+      return;
+    }
+
+    try {
+      setProcessingOverride(true);
+      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+
+      const response = await axios.post(
+        `/api/otp/override/${selectedOverride._id}/process`,
+        {
+          status: overrideDecision,
+          approvedBy: userId,
+          notes: overrideNotes
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.data.success) {
+        alert(`Override request ${overrideDecision}!`);
+        setShowOverrideModal(false);
+        setOverrideDecision('');
+        setOverrideNotes('');
+        setSelectedOverride(null);
+        loadVisitorData();
+      }
+    } catch (error) {
+      console.error('Error processing override:', error);
+      alert('Failed to process override request');
+    } finally {
+      setProcessingOverride(false);
     }
   };
 
@@ -88,9 +143,23 @@ const Visitors = () => {
     return <Badge bg="secondary">Completed</Badge>;
   };
 
+  const getUrgencyBadge = (urgency) => {
+    const colors = {
+      'low': 'info',
+      'medium': 'warning',
+      'high': 'danger'
+    };
+    return <Badge bg={colors[urgency] || 'secondary'}>{urgency.toUpperCase()}</Badge>;
+  };
+
   const handleViewDetails = (visit) => {
     setSelectedVisit(visit);
     setShowDetailsModal(true);
+  };
+
+  const handleOverrideDetails = (override) => {
+    setSelectedOverride(override);
+    setShowOverrideModal(true);
   };
 
   const filteredDateVisitors = dateVisitors.filter(visitor => 
@@ -161,14 +230,67 @@ const Visitors = () => {
           <Card className="border-0 shadow-sm">
             <Card.Body className="text-center">
               <div className="text-warning mb-2">
-                <Calendar size={32} />
+                <AlertCircle size={32} />
               </div>
-              <h4 className="mb-1">{stats.thisWeekVisitors}</h4>
-              <small className="text-muted">This Week</small>
+              <h4 className="mb-1">{stats.pendingOverrides}</h4>
+              <small className="text-muted">Pending Overrides</small>
             </Card.Body>
           </Card>
         </Col>
       </Row>
+
+      {/* Pending Override Requests */}
+      {pendingOverrides.length > 0 && (
+        <Card className="mb-4 border-0 shadow-sm border-left border-warning">
+          <Card.Header className="bg-warning text-dark">
+            <h5 className="mb-0">
+              <AlertCircle className="me-2" size={20} />
+              Pending Override Requests ({pendingOverrides.length})
+            </h5>
+          </Card.Header>
+          <Card.Body>
+            <div className="table-responsive">
+              <Table hover>
+                <thead>
+                  <tr>
+                    <th>Visitor Name</th>
+                    <th>Student</th>
+                    <th>Guard</th>
+                    <th>Purpose</th>
+                    <th>Urgency</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingOverrides.map((override) => (
+                    <tr key={override._id}>
+                      <td>
+                        <strong>{override.visitorName}</strong>
+                      </td>
+                      <td>{override.studentId?.name}</td>
+                      <td>{override.guardId?.name}</td>
+                      <td>{override.purpose}</td>
+                      <td>{getUrgencyBadge(override.urgency)}</td>
+                      <td>{new Date(override.requestedAt).toLocaleDateString()}</td>
+                      <td>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleOverrideDetails(override)}
+                        >
+                          <Eye size={14} className="me-1" />
+                          Review
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </Card.Body>
+        </Card>
+      )}
 
       {/* Active Visitors */}
       <Card className="mb-4 border-0 shadow-sm">
@@ -185,46 +307,48 @@ const Visitors = () => {
               <h6 className="text-muted">No active visitors</h6>
             </div>
           ) : (
-            <Table responsive hover>
-              <thead>
-                <tr>
-                  <th>Visitor Name</th>
-                  <th>Student</th>
-                  <th>Purpose</th>
-                  <th>Entry Time</th>
-                  <th>Duration</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeVisitors.map((visit) => (
-                  <tr key={visit._id}>
-                    <td>
-                      <strong>{visit.visitorName}</strong>
-                      {visit.isGroupVisit && (
-                        <Badge bg="info" className="ms-2">
-                          Group ({visit.groupSize})
-                        </Badge>
-                      )}
-                    </td>
-                    <td>{visit.studentName}</td>
-                    <td>{visit.purpose}</td>
-                    <td>{new Date(visit.entryTime).toLocaleString()}</td>
-                    <td>{formatDuration(visit.entryTime)}</td>
-                    <td>
-                      <Button
-                        variant="outline-primary"
-                        size="sm"
-                        onClick={() => handleViewDetails(visit)}
-                      >
-                        <Eye size={14} className="me-1" />
-                        View
-                      </Button>
-                    </td>
+            <div className="table-responsive">
+              <Table responsive hover>
+                <thead>
+                  <tr>
+                    <th>Visitor Name</th>
+                    <th>Student</th>
+                    <th>Purpose</th>
+                    <th>Entry Time</th>
+                    <th>Duration</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {activeVisitors.map((visit) => (
+                    <tr key={visit._id}>
+                      <td>
+                        <strong>{visit.visitorName}</strong>
+                        {visit.isGroupVisit && (
+                          <Badge bg="info" className="ms-2">
+                            Group ({visit.groupSize})
+                          </Badge>
+                        )}
+                      </td>
+                      <td>{visit.studentName}</td>
+                      <td>{visit.purpose}</td>
+                      <td>{new Date(visit.entryTime).toLocaleString()}</td>
+                      <td>{formatDuration(visit.entryTime)}</td>
+                      <td>
+                        <Button
+                          variant="outline-primary"
+                          size="sm"
+                          onClick={() => handleViewDetails(visit)}
+                        >
+                          <Eye size={14} className="me-1" />
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
           )}
         </Card.Body>
       </Card>
@@ -342,96 +466,81 @@ const Visitors = () => {
         </Card.Body>
       </Card>
 
-      {/* Visit History */}
-      {/* <Card className="border-0 shadow-sm">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 className="mb-0">
-              <Calendar className="me-2" size={20} />
-              Visit History
-            </h5>
-            <div className="d-flex gap-2 flex-wrap">
-              <Form.Control
-                type="text"
-                placeholder="Search visit history..."
-                size="sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '200px' }}
-              />
-            </div>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <Table responsive hover>
-            <thead>
-              <tr>
-                <th>Visitor Name</th>
-                <th>Student</th>
-                <th>Purpose</th>
-                <th>Entry Time</th>
-                <th>Exit Time</th>
-                <th>Duration</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visitHistory.filter(visit => 
-                visit.visitorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                visit.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                visit.purpose?.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map((visit) => (
-                <tr key={visit._id}>
-                  <td>
-                    <strong>{visit.visitorName}</strong>
-                    {visit.isGroupVisit && (
-                      <Badge bg="info" className="ms-2">
-                        Group ({visit.groupSize})
-                      </Badge>
-                    )}
-                  </td>
-                  <td>{visit.studentName}</td>
-                  <td>{visit.purpose}</td>
-                  <td>{new Date(visit.entryTime).toLocaleString()}</td>
-                  <td>
-                    {visit.exitTime 
-                      ? new Date(visit.exitTime).toLocaleString() 
-                      : '-'
-                    }
-                  </td>
-                  <td>{formatDuration(visit.entryTime, visit.exitTime)}</td>
-                  <td>{getStatusBadge(visit)}</td>
-                  <td>
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={() => handleViewDetails(visit)}
-                    >
-                      <Eye size={14} className="me-1" />
-                      View
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-          
-          {visitHistory.filter(visit => 
-            visit.visitorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            visit.studentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            visit.purpose?.toLowerCase().includes(searchTerm.toLowerCase())
-          ).length === 0 && (
-            <div className="text-center py-4">
-              <Calendar size={48} className="text-muted mb-3" />
-              <h6 className="text-muted">No visits found</h6>
-              <p className="text-muted small">
-                Try adjusting your search or date filter
-              </p>
-            </div>
+      {/* Override Details Modal */}
+      <Modal show={showOverrideModal} onHide={() => setShowOverrideModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Override Request Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedOverride && (
+            <>
+              <Alert variant="warning" className="d-flex align-items-center">
+                <AlertCircle className="me-2" size={20} />
+                <span>This is an out-of-hours visit request requiring your approval.</span>
+              </Alert>
+              
+              <Row className="mb-3">
+                <Col md={6}>
+                  <h6>Visitor Information</h6>
+                  <p><strong>Name:</strong> {selectedOverride.visitorName}</p>
+                  <p><strong>Phone:</strong> {selectedOverride.visitorPhone}</p>
+                  <p><strong>Purpose:</strong> {selectedOverride.purpose}</p>
+                </Col>
+                <Col md={6}>
+                  <h6>Request Information</h6>
+                  <p><strong>Student:</strong> {selectedOverride.studentId?.name}</p>
+                  <p><strong>Guard:</strong> {selectedOverride.guardId?.name}</p>
+                  <p><strong>Urgency:</strong> {getUrgencyBadge(selectedOverride.urgency)}</p>
+                  <p><strong>Requested:</strong> {new Date(selectedOverride.requestedAt).toLocaleString()}</p>
+                </Col>
+              </Row>
+
+              <h6>Decision</h6>
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="radio"
+                  label="Approve Request"
+                  name="decision"
+                  value="approved"
+                  checked={overrideDecision === 'approved'}
+                  onChange={(e) => setOverrideDecision(e.target.value)}
+                />
+                <Form.Check
+                  type="radio"
+                  label="Reject Request"
+                  name="decision"
+                  value="rejected"
+                  checked={overrideDecision === 'rejected'}
+                  onChange={(e) => setOverrideDecision(e.target.value)}
+                />
+              </Form.Group>
+
+              <Form.Group className="mb-3">
+                <Form.Label>Notes (Optional)</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  placeholder="Add any notes regarding this decision..."
+                  value={overrideNotes}
+                  onChange={(e) => setOverrideNotes(e.target.value)}
+                />
+              </Form.Group>
+            </>
           )}
-        </Card.Body>
-      </Card> */}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowOverrideModal(false)}>
+            Close
+          </Button>
+          <Button
+            variant={overrideDecision === 'approved' ? 'success' : 'danger'}
+            onClick={handleProcessOverride}
+            disabled={!overrideDecision || processingOverride}
+          >
+            {processingOverride ? 'Processing...' : 'Submit Decision'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Visit Details Modal */}
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
