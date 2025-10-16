@@ -6,10 +6,12 @@ import LoginPage from './auth/LoginPage';
 import StudentPage from './pages/StudentPage';
 import AdminPage from './pages/AdminPage';
 import SecurityPage from './pages/SecurityPage';
+import { AdminProvider } from './context/AdminContext';
 
 function App() {
   return (
-    <Router>
+    <AdminProvider>
+      <Router>
       <div className="App">
         <Toaster 
           position="top-right"
@@ -31,14 +33,16 @@ function App() {
           
           {/* Role-based routes */}
           <Route path="/student/*" element={<StudentPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/security" element={<SecurityPage />} />
+          {/* add trailing /* so nested routes inside AdminPage render correctly */}
+          <Route path="/admin/*" element={<AdminPage />} />
+          <Route path="/security/*" element={<SecurityPage />} />
           
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-    </Router>
+      </Router>
+    </AdminProvider>
   );
 }
 
