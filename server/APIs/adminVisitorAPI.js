@@ -35,7 +35,7 @@ router.get('/active', authenticateAdmin, async (req, res) => {
     console.error('Error fetching active visitors:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch active visitors'
+      message: error.message || 'Failed to fetch active visitors. Please try again later.'
     });
   }
 });

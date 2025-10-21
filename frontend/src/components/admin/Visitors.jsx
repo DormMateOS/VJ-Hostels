@@ -41,30 +41,64 @@ const Visitors = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      
-      // Load active visitors
-      const activeResponse = await axios.get('/api/admin/visitors/active', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Load statistics
-      const statsResponse = await axios.get('/api/admin/visitors/stats', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Load pending overrides
-      const overridesResponse = await axios.get('/api/otp/override/pending', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setActiveVisitors(activeResponse.data.visitors || []);
-      setStats({
-        ...statsResponse.data.stats || {},
-        pendingOverrides: overridesResponse.data.count || 0
-      });
-      setPendingOverrides(overridesResponse.data.requests || []);
+
+      if (!token) {
+        console.error('Authorization token is missing');
+        alert('You are not authorized. Please log in again.');
+        return;
+      }
+
+      // Load active visitors and stats in parallel for better performance
+      const [activeResponse, statsResponse] = await Promise.all([
+        axios.get('/api/admin/visitors/active', {
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get('/api/admin/visitors/stats', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ]);
+
+      // Set active visitors
+      if (activeResponse.data.success) {
+        setActiveVisitors(activeResponse.data.visitors || []);
+      } else {
+        console.error('Failed to fetch active visitors:', activeResponse.data.message);
+      }
+
+      // Set statistics
+      if (statsResponse.data.success) {
+        setStats({
+          totalVisitors: statsResponse.data.stats.totalVisitors || 0,
+          activeVisitors: statsResponse.data.stats.activeVisitors || 0,
+          todayVisitors: statsResponse.data.stats.todayVisitors || 0,
+          thisWeekVisitors: statsResponse.data.stats.thisWeekVisitors || 0,
+          pendingOverrides: 0 // This will be updated when we fetch override requests
+        });
+      } else {
+        console.error('Failed to fetch visitor statistics:', statsResponse.data.message);
+      }
+
+      // Try to fetch pending overrides
+      try {
+        const overridesResponse = await axios.get('/api/otp/override/pending', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (overridesResponse.data.success) {
+          setPendingOverrides(overridesResponse.data.requests || []);
+          // Update stats with pending overrides count
+          setStats(prevStats => ({
+            ...prevStats,
+            pendingOverrides: overridesResponse.data.count || 0
+          }));
+        }
+      } catch (overrideError) {
+        console.error('Error fetching pending overrides:', overrideError);
+      }
+
     } catch (error) {
-      console.error('Error loading visitor data:', error);
+      console.error('Error loading visitor data:', error.message || error);
+      alert('An error occurred while loading visitor data. Please try again later.');
     } finally {
       setLoading(false);
     }

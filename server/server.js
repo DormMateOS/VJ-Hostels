@@ -145,13 +145,23 @@ server.listen(port, () => {
     });
 });
 
+// Fallback route to handle undefined API routes
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api')) {
+    return res.status(404).json({
+      success: false,
+      message: 'API route not found'
+    });
+  }
+  next();
+});
 
-
-// app.use('/uploads', express.static('uploads'));
-// app.use('/api/admin', adminRoutes);
-// app.use('/api/student', studentRoutes);
-// app.use('/api/complaints', complaintRoutes);
-
+// Serve frontend for all other routes
+const path = require('path');
+app.use(exp.static(path.join(__dirname, '../frontend/dist')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
 
 // error handler
 app.use((err,req,res,next)=>{
