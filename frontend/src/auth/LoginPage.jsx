@@ -1,55 +1,57 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { Sun, Moon } from "lucide-react";
 import backgroundImage from "../assets/1.jpg";
-import logo from "../assets/vnrvjiet-logo.png";
+import logoDark from "../assets/vnrvjiet-logo.png";
+import logoLight from "../assets/vnrvjiet-logo.png";
 import { useAuthStore } from "../store/authStore";
+import GoogleOAuthButton from "./GoogleOAuthButton";
 
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isLoading, error } = useAuthStore();
+
   const [theme, setTheme] = useState("dark");
-
-  useEffect(() => {
-    const authStatus = searchParams.get("auth");
-    const errorParam = searchParams.get("error");
-    const token = searchParams.get("token");
-    const role = searchParams.get("role");
-
-    if (authStatus === "success" && token) {
-      if (role === "security") {
-        localStorage.setItem("guard_token", token);
-        navigate("/security", { replace: true });
-      } else if (role === "student") {
-        localStorage.setItem("token", token);
-        navigate("/student", { replace: true });
-      } else if (role === "admin") {
-        localStorage.setItem("token", token);
-        navigate("/admin", { replace: true });
-      }
-      toast.success("Successfully logged in with Google!");
-    } else if (errorParam) {
-      toast.error("Authentication failed. Please try again.");
-    }
-  }, [searchParams, navigate]);
+  const [selectedRole, setSelectedRole] = useState("");
 
   const isDark = theme === "dark";
 
   const themeStyles = {
-    cardBg: isDark ? "rgba(15, 20, 35, 0.75)" : "rgba(255, 255, 255, 0.7)",
+    cardBg: isDark ? "rgba(15, 20, 35, 0.75)" : "rgba(220, 230, 250, 0.85)",
     cardBorder: isDark
       ? "1px solid rgba(255,255,255,0.15)"
       : "1px solid rgba(0,0,0,0.1)",
-    textColor: isDark ? "#fff" : "#222",
+    textColor: isDark ? "#fff" : "#111",
     subText: isDark ? "#ccc" : "#555",
     btnBg: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
     btnBorder: isDark
       ? "1px solid rgba(255,255,255,0.25)"
       : "1px solid rgba(0,0,0,0.2)",
+    overlay: isDark ? "rgba(0,0,0,0.65)" : "rgba(255,255,255,0.35)",
   };
+
+  // OAuth callback handling and navigation
+  useEffect(() => {
+    const authStatus = searchParams.get("auth");
+    const token = searchParams.get("token");
+    const role = searchParams.get("role");
+
+    if (authStatus === "success" && token) {
+      if (role === "security") localStorage.setItem("guard_token", token);
+      else localStorage.setItem("token", token);
+
+      if (role === "security") navigate("/security", { replace: true });
+      else if (role === "student") navigate("/student", { replace: true });
+      else if (role === "admin") navigate("/admin", { replace: true });
+
+      toast.success("Successfully logged in with Google!");
+    } else if (searchParams.get("error")) {
+      toast.error("Authentication failed. Please try again.");
+    }
+  }, [searchParams, navigate]);
 
   return (
     <div
@@ -59,8 +61,8 @@ const LoginPage = () => {
         backgroundSize: "cover",
         backgroundPosition: "center",
         position: "relative",
-        transition: "all 0.3s ease",
         color: themeStyles.textColor,
+        transition: "all 0.3s ease",
       }}
     >
       {/* Overlay */}
@@ -68,11 +70,9 @@ const LoginPage = () => {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundColor: isDark
-            ? "rgba(0,0,0,0.65)"
-            : "rgba(255,255,255,0.45)",
+          backgroundColor: themeStyles.overlay,
           zIndex: 1,
-          transition: "all 0.4s ease",
+          transition: "all 0.3s ease",
         }}
       ></div>
 
@@ -84,9 +84,7 @@ const LoginPage = () => {
           top: "25px",
           right: "25px",
           zIndex: 3,
-          background: isDark
-            ? "rgba(255,255,255,0.1)"
-            : "rgba(0,0,0,0.1)",
+          background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
           border: "none",
           borderRadius: "50%",
           padding: "8px",
@@ -125,7 +123,7 @@ const LoginPage = () => {
           style={{ gap: "15px" }}
         >
           <img
-            src={logo}
+            src={isDark ? logoDark : logoLight}
             alt="VNR Logo"
             style={{
               width: "75px",
@@ -133,10 +131,17 @@ const LoginPage = () => {
               filter: isDark
                 ? "drop-shadow(0px 0px 6px rgba(255,255,255,0.2))"
                 : "drop-shadow(0px 0px 6px rgba(0,0,0,0.3))",
+              transition: "all 0.3s ease",
             }}
           />
           <div style={{ textAlign: "left" }}>
-            <h2 style={{ margin: 0, fontWeight: "bold", color: themeStyles.textColor }}>
+            <h2
+              style={{
+                margin: 0,
+                fontWeight: "bold",
+                color: themeStyles.textColor,
+              }}
+            >
               VNR VJIET
             </h2>
             <h5 style={{ margin: 0, color: themeStyles.subText }}>
@@ -159,7 +164,7 @@ const LoginPage = () => {
         </p>
 
         {/* Role Buttons */}
-        <div className="mb-4 d-flex justify-content-between">
+        <div className="mb-4 d-flex justify-content-between" style={{ gap: "12px" }}>
           {[
             { id: "student", label: "Student", icon: "🎓" },
             { id: "admin", label: "Admin", icon: "👨‍💼" },
@@ -167,22 +172,26 @@ const LoginPage = () => {
           ].map((role) => (
             <button
               key={role.id}
-              className="btn w-100 mx-1"
+              className="btn flex-grow-1"
               style={{
                 backgroundColor: themeStyles.btnBg,
-                border: themeStyles.btnBorder,
+                border: selectedRole === role.id
+                  ? "2px solid rgba(59,130,246,0.9)"
+                  : "2px solid transparent",
                 borderRadius: "12px",
                 color: themeStyles.textColor,
-                transition: "all 0.3s ease",
+                transition: "box-shadow 0.3s ease, border 0.3s ease",
+                minWidth: "100px",
               }}
+              onClick={() => setSelectedRole(role.id)}
               onMouseEnter={(e) => {
-                e.currentTarget.style.border = "1px solid rgba(59,130,246,0.8)";
                 e.currentTarget.style.boxShadow =
                   "0 0 12px rgba(59,130,246,0.6)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.border = themeStyles.btnBorder;
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.boxShadow = selectedRole === role.id
+                  ? "0 0 18px rgba(59,130,246,0.7)"
+                  : "none";
               }}
             >
               <span style={{ fontSize: "1.2rem" }}>{role.icon}</span>
@@ -193,47 +202,13 @@ const LoginPage = () => {
           ))}
         </div>
 
-        {/* Mild Google Button with soft hover */}
+        {/* ORIGINAL Google OAuth Button */}
         <div className="d-grid">
-          <button
-            disabled={isLoading}
-            style={{
-              background: isDark
-                ? "rgba(255,255,255,0.12)"
-                : "rgba(0,0,0,0.08)",
-              color: themeStyles.textColor,
-              width: "100%",
-              border: themeStyles.btnBorder,
-              borderRadius: "8px",
-              padding: "10px 0",
-              fontWeight: "500",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              transition: "all 0.3s ease",
-              boxShadow: "none",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = isDark
-                ? "0 0 10px rgba(255,255,255,0.2)"
-                : "0 0 10px rgba(0,0,0,0.1)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            <img
-              src="https://www.svgrepo.com/show/355037/google.svg"
-              alt="Google"
-              style={{
-                width: "18px",
-                height: "18px",
-                opacity: 0.9,
-              }}
-            />
-            {isLoading ? "Signing in..." : "Sign in with Google"}
-          </button>
+          <GoogleOAuthButton
+            isLoading={isLoading}
+            disabled={!selectedRole}
+            selectedRole={selectedRole}
+          />
         </div>
 
         <p
@@ -248,3 +223,4 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+``
