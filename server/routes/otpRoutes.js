@@ -31,6 +31,13 @@ router.post('/verify',
   OTPController.verifyOTP
 );
 
+// Student OTP Generation
+router.post('/generate',
+  authenticateStudent,
+  auditLog('student_otp_generated'),
+  OTPController.generateStudentOTP
+);
+
 // Visit Routes - Checkout
 router.post('/visits/:visitId/checkout',
   authenticateGuard,

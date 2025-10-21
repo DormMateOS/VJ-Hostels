@@ -4,6 +4,8 @@ import { Eye, Users, Clock, Calendar, Search, Filter, Download, AlertCircle } fr
 import {FiRefreshCcw} from 'react-icons/fi';
 import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:4000'; // Add this at the top
+
 const Visitors = () => {
   const [activeVisitors, setActiveVisitors] = useState([]);
   const [visitHistory, setVisitHistory] = useState([]);
@@ -40,31 +42,71 @@ const Visitors = () => {
   const loadVisitorData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      
-      // Load active visitors
-      const activeResponse = await axios.get('/api/admin/visitors/active', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Load statistics
-      const statsResponse = await axios.get('/api/admin/visitors/stats', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Load pending overrides
-      const overridesResponse = await axios.get('/api/otp/override/pending', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setActiveVisitors(activeResponse.data.visitors || []);
-      setStats({
-        ...statsResponse.data.stats || {},
-        pendingOverrides: overridesResponse.data.count || 0
-      });
-      setPendingOverrides(overridesResponse.data.requests || []);
+      const token = localStorage.getItem('adminToken');
+
+      // if (!token) {
+      //   alert('Admin authentication required');
+      //   window.location.href = '/admin/login';
+      //   return;
+      // }
+
+      const config = {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-access-role': 'admin'
+        },
+        withCredentials: true
+      };
+
+      try {
+        const [activeResponse, statsResponse] = await Promise.all([
+          axios.get(`${API_BASE_URL}/api/admin/visitors/active`, config),
+          axios.get(`${API_BASE_URL}/api/admin/visitors/stats`, config)
+        ]);
+
+        if (activeResponse.data.success) {
+          setActiveVisitors(activeResponse.data.visitors || []);
+        }
+
+        if (statsResponse.data.success) {
+          setStats(prevStats => ({
+            ...prevStats,
+            totalVisitors: statsResponse.data.stats.totalVisitors || 0,
+            activeVisitors: statsResponse.data.stats.activeVisitors || 0,
+            todayVisitors: statsResponse.data.stats.todayVisitors || 0,
+            thisWeekVisitors: statsResponse.data.stats.thisWeekVisitors || 0
+          }));
+        }
+
+        // Load overrides
+        // const overridesResponse = await axios.get(
+        //   `${API_BASE_URL}/api/admin/override/pending`,
+        //   config
+        // );
+
+        // if (overridesResponse.data.success) {
+        //   setPendingOverrides(overridesResponse.data.requests || []);
+        //   setStats(prevStats => ({
+        //     ...prevStats,
+        //     pendingOverrides: overridesResponse.data.count || 0
+        //   }));
+        // }
+
+      } catch (error) {
+        if (error.response?.status === 403) {
+          alert('Admin access required');
+          window.location.href = '/admin/login';
+        }
+        throw error;
+      }
+
     } catch (error) {
       console.error('Error loading visitor data:', error);
+      if (error.response?.status === 403) {
+        localStorage.removeItem('adminToken');
+        window.location.href = '/admin/login';
+      }
     } finally {
       setLoading(false);
     }
@@ -72,13 +114,29 @@ const Visitors = () => {
 
   const loadDateVisitors = async () => {
     try {
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const response = await axios.get(`/api/admin/visitors/by-date?date=${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const token = localStorage.getItem('adminToken');
+      const config = {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-access-role': 'admin'
+        },
+        withCredentials: true
+      };
       
-      setDateVisitors(response.data.visitors || []);
+      const response = await axios.get(
+        `${API_BASE_URL}/api/admin/visitors/by-date?date=${selectedDate}`, 
+        config
+      );
+      
+      if (response.data.success) {
+        setDateVisitors(response.data.visitors || []);
+      }
     } catch (error) {
+      if (error.response?.status === 403) {
+        alert('Session expired. Please login again.');
+        window.location.href = '/admin/login';
+      }
       console.error('Error loading date visitors:', error);
       setDateVisitors([]);
     }
@@ -92,19 +150,24 @@ const Visitors = () => {
 
     try {
       setProcessingOverride(true);
-      const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-      const userId = localStorage.getItem('userId');
+      const token = localStorage.getItem('adminToken');
+      
+      const config = {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-access-role': 'admin'
+        },
+        withCredentials: true
+      };
 
       const response = await axios.post(
-        `/api/otp/override/${selectedOverride._id}/process`,
+        `${API_BASE_URL}/api/admin/override/${selectedOverride._id}/process`,
         {
           status: overrideDecision,
-          approvedBy: userId,
           notes: overrideNotes
         },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        config
       );
 
       if (response.data.success) {
@@ -116,8 +179,11 @@ const Visitors = () => {
         loadVisitorData();
       }
     } catch (error) {
+      if (error.response?.status === 403) {
+        alert('You do not have permission to process overrides');
+        window.location.href = '/admin/login';
+      }
       console.error('Error processing override:', error);
-      alert('Failed to process override request');
     } finally {
       setProcessingOverride(false);
     }
@@ -193,7 +259,7 @@ const Visitors = () => {
 
       {/* Statistics Cards */}
       <Row className="mb-4">
-        <Col md={3}>
+        <Col md={4}>
           <Card className="border-0 shadow-sm">
             <Card.Body className="text-center">
               <div className="text-primary mb-2">
@@ -204,7 +270,7 @@ const Visitors = () => {
             </Card.Body>
           </Card>
         </Col>
-        <Col md={3}>
+        <Col md={4}>
           <Card className="border-0 shadow-sm">
             <Card.Body className="text-center">
               <div className="text-success mb-2">
@@ -215,7 +281,7 @@ const Visitors = () => {
             </Card.Body>
           </Card>
         </Col>
-        <Col md={3}>
+        <Col md={4}>
           <Card className="border-0 shadow-sm">
             <Card.Body className="text-center">
               <div className="text-info mb-2">
@@ -223,17 +289,6 @@ const Visitors = () => {
               </div>
               <h4 className="mb-1">{stats.todayVisitors}</h4>
               <small className="text-muted">Today's Visitors</small>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={3}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body className="text-center">
-              <div className="text-warning mb-2">
-                <AlertCircle size={32} />
-              </div>
-              <h4 className="mb-1">{stats.pendingOverrides}</h4>
-              <small className="text-muted">Pending Overrides</small>
             </Card.Body>
           </Card>
         </Col>

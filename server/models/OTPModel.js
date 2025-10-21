@@ -55,7 +55,9 @@ const otpSchema = new mongoose.Schema({
   createdByGuardId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Guard',
-    required: true
+    required: function() {
+      return !this.isStudentGenerated; // Only required if not student generated
+    }
   },
   groupSize: {
     type: Number,
@@ -65,9 +67,38 @@ const otpSchema = new mongoose.Schema({
   isGroupOTP: {
     type: Boolean,
     default: false
+  },
+  createdByStudentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student'
+  },
+  isStudentGenerated: {
+    type: Boolean,
+    default: false
+  },
+  expiryType: {
+    type: String,
+    enum: ['fixed', 'midnight'],
+    default: 'fixed'
   }
 }, {
   timestamps: true
+});
+
+// Add pre-save middleware to set expiry time
+otpSchema.pre('save', function(next) {
+  if (this.isStudentGenerated) {
+    // Set expiry to midnight for student-generated OTPs
+    const midnight = new Date();
+    midnight.setHours(24, 0, 0, 0);
+    this.expiresAt = midnight;
+    this.expiryType = 'midnight';
+  } else {
+    // Set 5-minute expiry for guard-generated OTPs
+    this.expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    this.expiryType = 'fixed';
+  }
+  next();
 });
 
 // Index for efficient queries

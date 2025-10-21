@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Clock, CheckCircle, XCircle, Phone, User, Calendar, AlertCircle, Settings, Copy, Check } from 'lucide-react';
+import { Users, Clock, CheckCircle, XCircle, Phone, User, Calendar, AlertCircle, Settings, Copy, Check, Plus } from 'lucide-react';
 import useCurrentUser from '../../hooks/student/useCurrentUser';
 import VisitorPreferences from './VisitorPreferences';
 import io from 'socket.io-client';
@@ -7,7 +7,6 @@ import io from 'socket.io-client';
 const VisitorManagement = () => {
   const { user } = useCurrentUser();
   const [activeOTPs, setActiveOTPs] = useState(() => {
-    // Load OTPs from localStorage on initial render
     try {
       const saved = localStorage.getItem('activeOTPs');
       return saved ? JSON.parse(saved) : [];
@@ -17,20 +16,24 @@ const VisitorManagement = () => {
     }
   });
   const [visitHistory, setVisitHistory] = useState([]);
-  const [currentView, setCurrentView] = useState('active'); // 'active', 'history', or 'preferences'
+  const [currentView, setCurrentView] = useState('active'); // 'active', 'history', 'preferences', 'generate'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [copiedOTP, setCopiedOTP] = useState(null);
+  const [visitorForm, setVisitorForm] = useState({
+    visitorName: '',
+    visitorPhone: '',
+    purpose: '',
+    groupSize: 1
+  });
 
   useEffect(() => {
     if (user) {
       loadActiveOTPs();
       loadVisitHistory();
       
-      // Set up Socket.IO connection for real-time updates
       const socket = io('http://localhost:4000');
       
-      // Listen for new OTPs for this student
       console.log('Listening for OTPs on channel:', `student-${user.id}`);
       console.log('User object in VisitorManagement:', user);
       
@@ -42,12 +45,10 @@ const VisitorManagement = () => {
             localStorage.setItem('activeOTPs', JSON.stringify(updated));
             return updated;
           });
-          // Show notification
           setError(null);
         }
       });
 
-      // Also listen with _id format in case there's a mismatch
       socket.on(`student-${user._id}`, (data) => {
         console.log('Received OTP data on _id channel:', data);
         if (data.type === 'new_otp') {
@@ -60,29 +61,24 @@ const VisitorManagement = () => {
         }
       });
 
-      // Debug: Listen to general community events
       socket.on('new_otp_created', (data) => {
         console.log('General OTP created event:', data);
       });
 
-      // Listen for OTP verification events
       socket.on('otpVerified', (data) => {
         if (data.otp.studentId === user.id) {
-          // Remove the verified OTP from active list
           setActiveOTPs(prev => {
             const updated = prev.filter(otp => otp._id !== data.otp._id);
             localStorage.setItem('activeOTPs', JSON.stringify(updated));
             return updated;
           });
-          // Refresh visit history
           loadVisitHistory();
         }
       });
 
-      // Set up polling as backup
       const interval = setInterval(() => {
         loadActiveOTPs();
-      }, 30000); // Poll every 30 seconds as backup
+      }, 30000);
 
       return () => {
         socket.disconnect();
@@ -107,7 +103,6 @@ const VisitorManagement = () => {
         const data = await response.json();
         const otps = data.otps || [];
         setActiveOTPs(otps);
-        // Save to localStorage
         localStorage.setItem('activeOTPs', JSON.stringify(otps));
       } else {
         console.error('Failed to load OTPs:', response.status, response.statusText);
@@ -143,7 +138,6 @@ const VisitorManagement = () => {
     }
   };
 
-  // Clean up expired OTPs from localStorage
   useEffect(() => {
     const cleanupExpiredOTPs = () => {
       setActiveOTPs(prev => {
@@ -156,7 +150,7 @@ const VisitorManagement = () => {
       });
     };
 
-    const interval = setInterval(cleanupExpiredOTPs, 60000); // Clean every minute
+    const interval = setInterval(cleanupExpiredOTPs, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -177,10 +171,9 @@ const VisitorManagement = () => {
     try {
       await navigator.clipboard.writeText(otp);
       setCopiedOTP(otpId);
-      setTimeout(() => setCopiedOTP(null), 2000); // Reset after 2 seconds
+      setTimeout(() => setCopiedOTP(null), 2000);
     } catch (error) {
       console.error('Failed to copy OTP:', error);
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = otp;
       document.body.appendChild(textArea);
@@ -214,10 +207,52 @@ const VisitorManagement = () => {
     }
   };
 
+  const handleGenerateOTP = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:4000/api/otp/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...visitorForm,
+          studentId: user.id
+        }),
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setActiveOTPs(prev => {
+          const updated = [data.otp, ...prev];
+          localStorage.setItem('activeOTPs', JSON.stringify(updated));
+          return updated;
+        });
+        setCurrentView('active');
+        setVisitorForm({
+          visitorName: '',
+          visitorPhone: '',
+          purpose: '',
+          groupSize: 1
+        });
+      } else {
+        setError('Failed to generate OTP');
+      }
+    } catch (error) {
+      console.error('Failed to generate OTP:', error);
+      setError('Failed to generate OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="visitor-management">
       <div className="container-fluid">
-        {/* Header */}
         <div className="row mb-4">
           <div className="col-12">
             <div className="d-flex justify-content-between align-items-center">
@@ -226,6 +261,13 @@ const VisitorManagement = () => {
                 <p className="text-muted mb-0">Track your visitor requests and OTPs</p>
               </div>
               <div className="btn-group" role="group">
+                <button
+                  type="button"
+                  className={`btn ${currentView === 'generate' ? 'btn-primary' : 'btn-outline-primary'}`}
+                  onClick={() => setCurrentView('generate')}
+                >
+                  Generate OTP
+                </button>
                 <button
                   type="button"
                   className={`btn ${currentView === 'active' ? 'btn-primary' : 'btn-outline-primary'}`}
@@ -242,14 +284,6 @@ const VisitorManagement = () => {
                   <Calendar size={16} className="me-1" />
                   Visit History
                 </button>
-                {/* <button
-                  type="button"
-                  className={`btn ${currentView === 'preferences' ? 'btn-primary' : 'btn-outline-primary'}`}
-                  onClick={() => setCurrentView('preferences')}
-                >
-                  <Settings size={16} className="me-1" />
-                  Preferences
-                </button> */}
               </div>
             </div>
           </div>
@@ -271,7 +305,73 @@ const VisitorManagement = () => {
           </div>
         )}
 
-        {/* Active OTPs View */}
+        {currentView === 'generate' && (
+          <div className="row">
+            <div className="col-12">
+              <div className="card">
+                <div className="card-header">
+                  <h5 className="mb-0">
+                    Generate Visitor OTP
+                  </h5>
+                </div>
+                <div className="card-body">
+                  <form onSubmit={handleGenerateOTP}>
+                    <div className="mb-3">
+                      <label className="form-label">Visitor Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={visitorForm.visitorName}
+                        onChange={(e) => setVisitorForm({...visitorForm, visitorName: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Visitor Phone</label>
+                      <input
+                        type="tel"
+                        className="form-control"
+                        value={visitorForm.visitorPhone}
+                        onChange={(e) => setVisitorForm({...visitorForm, visitorPhone: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Purpose of Visit</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={visitorForm.purpose}
+                        onChange={(e) => setVisitorForm({...visitorForm, purpose: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Group Size</label>
+                      <select
+                        className="form-select"
+                        value={visitorForm.groupSize}
+                        onChange={(e) => setVisitorForm({...visitorForm, groupSize: parseInt(e.target.value)})}
+                      >
+                        {[1,2,3,4,5].map(size => (
+                          <option key={size} value={size}>{size} {size === 1 ? 'person' : 'people'}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={loading}
+                    >
+                      {loading ? 'Generating...' : 'Generate OTP'}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {currentView === 'active' && (
           <div className="row">
             <div className="col-12">
@@ -382,12 +482,10 @@ const VisitorManagement = () => {
           </div>
         )}
 
-        {/* Preferences View */}
         {currentView === 'preferences' && (
           <VisitorPreferences />
         )}
 
-        {/* Visit History View */}
         {currentView === 'history' && (
           <div className="row">
             <div className="col-12">

@@ -224,14 +224,20 @@ const authenticateWarden = async (req, res, next) => {
   }
 };
 
-// Permission check middleware
+// Modified permission check middleware
 const checkPermission = (permission) => {
   return (req, res, next) => {
+    // Allow students to request OTP if they're authenticated
+    if (req.student) {
+      return next();
+    }
+
+    // Check guard permissions
     if (!req.guard) {
       return res.status(403).json({
         success: false,
-        message: 'Guard authentication required',
-        code: 'GUARD_AUTH_REQUIRED'
+        message: 'Authentication required',
+        code: 'AUTH_REQUIRED'
       });
     }
 
