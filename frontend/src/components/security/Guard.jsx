@@ -7,7 +7,7 @@ import './Guard.css';
 const Guard = () => {
   const { user, logout } = useAuth();
 
-  const [currentView, setCurrentView] = useState('search'); // search, otp, visits
+  const [currentView, setCurrentView] = useState('search'); // search, otp, visits, verify
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -21,6 +21,10 @@ const Guard = () => {
   const [activeVisits, setActiveVisits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [otpVerificationData, setOtpVerificationData] = useState({
+    visitorPhone: '',
+    otp: ''
+  });
 
   useEffect(() => {
     socketService.connect();
@@ -226,6 +230,34 @@ const Guard = () => {
     }
   };
 
+  const handleDirectOTPVerify = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await otpAPI.verifyOTP({
+        visitorPhone: otpVerificationData.visitorPhone,
+        providedOtp: otpVerificationData.otp,
+        guardId: user._id || user.id
+      });
+
+      if (response.data.success) {
+        setOtpStatus('verified');
+        loadActiveVisits();
+        setTimeout(() => {
+          setCurrentView('visits');
+          setOtpVerificationData({ visitorPhone: '', otp: '' });
+        }, 2000);
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'OTP verification failed';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setSelectedStudent(null);
     setSearchQuery('');
@@ -258,6 +290,12 @@ const Guard = () => {
               className={`guard-btn ${currentView === 'search' ? 'guard-btn-active' : 'guard-btn-inactive'}`}
             >
               New Visitor
+            </button>
+            <button
+              onClick={() => setCurrentView('verify')}
+              className={`guard-btn ${currentView === 'verify' ? 'guard-btn-active' : 'guard-btn-inactive'}`}
+            >
+              Verify OTP
             </button>
             <button
               onClick={() => setCurrentView('visits')}
@@ -297,6 +335,68 @@ const Guard = () => {
             onReset={resetForm}
             loading={loading}
           />
+        )}
+
+        {currentView === 'verify' && (
+          <div className="row">
+            <div className="col-12">
+              <div className="card">
+                <div className="card-header">
+                  <h5 className="mb-0">
+                    Verify Student OTP
+                  </h5>
+                </div>
+                <div className="card-body">
+                  <form onSubmit={handleDirectOTPVerify}>
+                    <div className="mb-3">
+                      <label className="form-label">Visitor Phone Number</label>
+                      <input
+                        type="tel"
+                        className="form-control"
+                        value={otpVerificationData.visitorPhone}
+                        onChange={(e) => setOtpVerificationData({
+                          ...otpVerificationData,
+                          visitorPhone: e.target.value
+                        })}
+                        required
+                        placeholder="Enter visitor's phone number"
+                      />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">OTP</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={otpVerificationData.otp}
+                        onChange={(e) => setOtpVerificationData({
+                          ...otpVerificationData,
+                          otp: e.target.value
+                        })}
+                        required
+                        maxLength={6}
+                        placeholder="Enter 6-digit OTP"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      disabled={loading || 
+                        !otpVerificationData.visitorPhone || 
+                        otpVerificationData.otp.length !== 6}
+                    >
+                      {loading ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                  </form>
+
+                  {otpStatus === 'verified' && (
+                    <div className="alert alert-success mt-3">
+                      ✅ OTP verified successfully. Entry granted.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {currentView === 'visits' && (

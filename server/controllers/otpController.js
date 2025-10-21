@@ -570,6 +570,96 @@ class OTPController {
       });
     }
   }
+
+  // Generate OTP by student
+  static async generateStudentOTP(req, res) {
+    try {
+      const { visitorName, visitorPhone, purpose, groupSize = 1 } = req.body;
+      const studentId = req.student._id;
+
+      // Validate required fields
+      if (!visitorName || !visitorPhone || !purpose) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields',
+          code: 'MISSING_FIELDS'
+        });
+      }
+
+      // Validate phone number format
+      const phoneRegex = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/;
+      if (!phoneRegex.test(visitorPhone.replace(/\s/g, ''))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid phone number format',
+          code: 'INVALID_PHONE'
+        });
+      }
+
+      // Sanitize phone number
+      const sanitizedPhone = OTPUtils.sanitizePhoneNumber(visitorPhone);
+
+      // Generate OTP
+      const otp = OTPUtils.generateOTP(6);
+      const otpHash = await OTPUtils.hashOTP(otp, sanitizedPhone);
+
+      // Create OTP record
+      const otpRecord = await OTP.create({
+        studentId,
+        visitorPhone: sanitizedPhone,
+        visitorName,
+        otpHash,
+        otpValue: otp,
+        purpose,
+        createdByStudentId: studentId,
+        groupSize: parseInt(groupSize) || 1,
+        isStudentGenerated: true
+      });
+
+      // Emit socket event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`student_${studentId}`).emit('otpGenerated', {
+          type: 'new_otp',
+          otp: {
+            _id: otpRecord._id,
+            visitorName,
+            visitorPhone: sanitizedPhone,
+            purpose,
+            groupSize,
+            createdAt: otpRecord.createdAt,
+            expiresAt: otpRecord.expiresAt,
+            attempts: 0,
+            otp
+          }
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'OTP generated successfully',
+        otp: {
+          _id: otpRecord._id,
+          visitorName,
+          visitorPhone: sanitizedPhone,
+          purpose,
+          groupSize,
+          createdAt: otpRecord.createdAt,
+          expiresAt: otpRecord.expiresAt,
+          attempts: 0,
+          otp
+        }
+      });
+
+    } catch (error) {
+      console.error('Generate student OTP error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate OTP',
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = OTPController;
