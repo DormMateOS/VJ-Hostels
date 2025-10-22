@@ -204,7 +204,7 @@ const LoginPage = () => {
 
         {/* ORIGINAL Google OAuth Button */}
         <div className="d-grid">
-          <GoogleOAuthButton
+          <GoogleOAuthButton className="w-10"
             isLoading={isLoading}
             disabled={!selectedRole}
             selectedRole={selectedRole}
