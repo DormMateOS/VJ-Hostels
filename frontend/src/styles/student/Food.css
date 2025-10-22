@@ -1,324 +1,355 @@
-/* Food.css */
-
+/* === GLOBAL CONTAINER === */
 .food-container {
     padding: 2rem;
     max-width: 1200px;
     margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: 'Inter', 'Roboto', 'Segoe UI', sans-serif;
+    background: #fafafa;
+    color: #222;
 }
 
+/* === HEADER === */
 .food-header {
     text-align: center;
     margin-bottom: 2rem;
 }
 
 .food-header h2 {
-    font-size: 2rem;
-    font-weight: 600;
+    font-size: 2.3rem; /* Adjusted for impact */
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
 }
+
+.food-header p {
+    font-size: 1rem;
+    color: #555;
+    margin-top: -0.5rem; /* Tighter spacing to header */
+}
+
+/* --- TAB SECTION --- */
+/* --- TAB SECTION (Modified for Clean, Shadowed, and Glowing Look) --- */
+
+/* --- TAB SECTION (Modified for Clean, Shadowed, and Glowing Look) --- */
 
 .tab-container {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem; 
 }
 
+/* Base Card Styling - Clean, Shadowed, Larger, and Rounded */
 .tab-card {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 0.8rem 0.5rem;
+    background: #FFFFFF; /* No internal color/fill */
+    border: 1px solid #dee2e6; /* Light, subtle border for structure */
+    border-radius: 28px; /* Slightly larger radius than before for clear pill shape */
+    padding: 0.8rem 1.8rem; /* Increased padding to make it "somewhat big" */
     cursor: pointer;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
+    flex-direction: row; 
+    align-items: center; /* ✅ Ensures icon & text are vertically centered */
+    justify-content: center; /* ✅ Centers them horizontally */
+    gap: 0.6rem; 
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    height: 100%;
-    min-height: 70px;
+
+    /* Shadow Down of the Card (at rest) */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
+    
+    color: #343a40; /* Dark text color for readability */
+    text-align: center; /* ✅ Centers text if it wraps */
 }
 
+/* Hover Effect: Border Glow */
 .tab-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    border-color: #0D6EFD;
+    transform: scale(1.02); /* ✅ 2% zoom instead of lift */
+    /* Blue Glow Effect on Borders/Shadow */
+    box-shadow: 0 0 0 3px rgba(67, 100, 247, 0.3), /* The main border glow */
+                0 6px 16px rgba(0, 0, 0, 0.15); /* Main lift shadow */
+    border-color: #4364f7; /* Change border color to match glow */
 }
 
+/* Active Tab Styling - Blue Text and Blue Border (No Fill) */
 .tab-card.active-tab-card {
-    background: linear-gradient(135deg, #0D6EFD 0%, #0056b3 100%);
-    color: white;
-    border-color: #0D6EFD;
-    box-shadow: 0 4px 16px rgba(13, 110, 253, 0.3);
+    background: #FFFFFF; /* Ensure it stays white/no fill */
+    color: #4364f7; /* Primary blue text for active state */
+    border: 1px solid #4364f7; /* Solid blue border */
+    box-shadow: 0 0 0 1px #4364f7, /* A very subtle inner glow for active status */
+                0 4px 12px rgba(67, 100, 247, 0.2); /* Lift shadow with a blue tint */
+    transform: none; /* No zoom when active */
 }
 
-.tab-card.active-tab-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.4);
-}
-
+/* Make sure icons are visually centered */
 .tab-icon {
-    font-size: 1.2rem;
-    transition: all 0.3s ease;
-}
-
-.tab-text {
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-align: center;
-    line-height: 1.1;
-}
-
-.tab-card.active-tab-card .tab-icon {
-    transform: scale(1.1);
-}
-
-/* Legacy tab styles for backward compatibility */
-.tab {
-    padding: 1rem 1.5rem;
-    cursor: pointer;
+    font-size: 1.1rem; /* Slightly larger icon size */
+    line-height: 1; /* ✅ Prevents icon from sitting higher/lower than text */
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    border-bottom: 3px solid transparent;
-    transition: all 0.3s ease;
-    font-size: 1rem;
-    white-space: nowrap;
+    justify-content: center;
 }
 
-.tab.active-tab {
-    border-bottom: 3px solid #0D6EFD;
-    font-weight: bold;
-    color: #0D6EFD;
+/* Text perfectly aligned next to icon */
+.tab-text {
+    font-size: 1rem; /* Clear, standard text size */
+    font-weight: 600;
+    white-space: nowrap; 
+    display: flex;
+    align-items: center;
 }
 
-.tab i {
-    font-size: 1.2rem;
+/* Pause Service Tab (Adapted for the new style) */
+.pause-service-tab.tab-card {
+    background: #FFFFFF;
+    color: #842029; /* Dark red text */
+    border: 1px solid #f5c2c7;
+    box-shadow: 0 4px 12px rgba(132, 32, 41, 0.1); /* Red-tinted resting shadow */
 }
 
+.pause-service-tab.tab-card:hover {
+    background: #FFFFFF;
+    color: #58151c;
+    transform: scale(1.02); /* ✅ Same subtle zoom effect */
+    /* Red Glow Effect on Hover */
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3), /* The red border glow */
+                0 6px 16px rgba(132, 32, 41, 0.15); /* Main lift shadow */
+    border-color: #dc3545; /* Change border color to red */
+}
+
+/* === RESPONSIVE FIX === */
+@media (max-width: 768px) {
+    .tab-card {
+        padding: 0.7rem 0.5rem; /* Adjusted mobile padding */
+        flex-direction: column; /* Column on small screens */
+    }
+    .tab-text {
+        font-size: 0.8rem;
+    }
+}
+
+
+/* Badge for feedback reminder */
+.feedback-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    padding: 0.2rem 0.5rem;
+    border-radius: 50%;
+    background-color: #ff4d4f; /* Red/Alert color */
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* --- TODAY'S MENU --- */
 .menu-card {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08); /* Stronger shadow for main content */
     padding: 2rem;
     margin-bottom: 2rem;
+    font-family: 'Inter', 'Poppins', sans-serif;
+    position: relative; /* For the Progress Line */
 }
 
 .menu-card h3 {
-    margin-bottom: 1.5rem;
-    text-align: center;
-    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    font-size: 1.6rem;
     font-weight: 600;
+    color: #4364f7; /* Primary blue heading */
+    text-align: center;
 }
 
-.meal-section {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    border-radius: 8px;
-    background-color: #f8f9fa;
+/* Progress Line (Visual Connector) */
+.progress-line {
+    position: absolute;
+    left: 48px; /* Adjusted to align with card centers on desktop */
+    top: 100px; /* Start point */
+    bottom: 20px; /* End point */
+    width: 3px;
+    background-color: #f0f0f0;
+    z-index: 1;
 }
 
-.meal-title {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-    color: #0D6EFD;
-    font-size: 1.2rem;
-}
-
-.meal-title span {
-    font-size: 1.5rem;
-}
-
-.feedback-form {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    padding: 1.5rem;
-    position: relative;
-}
-
-.feedback-form .form-select {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.feedback-form .dropdown-container {
-    position: relative;
-    z-index: 10;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-}
-
-.form-select {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    font-size: 1rem;
-}
-
-.rating-container {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.star-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.5rem;
-    color: #ccc;
-    transition: color 0.2s ease;
-    padding: 0;
-}
-
-.star-button.active-star {
-    color: #FFD700;
-}
-
-.form-textarea {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 5px;
-    border: 1px solid #ddd;
-    font-size: 1rem;
-    min-height: 100px;
-    resize: vertical;
-}
-
-.submit-button {
-    background-color: #0D6EFD;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-
-.submit-button:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
-}
-
-.success-message {
-    background-color: #d4edda;
-    color: #155724;
-    padding: 1rem;
-    border-radius: 5px;
-    margin-bottom: 1rem;
-}
-
-.error-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    padding: 1rem;
-    border-radius: 5px;
-    margin-bottom: 1rem;
-}
-
-.loading-spinner {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 200px;
-}
-
-.blinking-light {
-    display: inline-block;
+.meal-status-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    margin-right: 8px;
+    position: absolute;
+    left: 43px;
+    background-color: #ccc;
+    z-index: 2;
+    transition: background-color 0.3s ease;
 }
 
-@keyframes blink {
-    0% { opacity: 1; }
-    50% { opacity: 0.3; }
-    100% { opacity: 1; }
+/* Individual meal boxes */
+.menu-card .meal-item-card {
+    position: relative;
+    border: 1px solid #e6f7ff !important;
+    border-radius: 14px !important;
+    background: #f7fcff !important;
+    padding: 1.5rem !important; /* Slightly more padding */
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease, background 0.3s ease;
+    margin-bottom: 1.5rem; /* Space between rows */
+    z-index: 5; /* Keep meal card above the progress line */
 }
 
-/* Responsive Styles */
+/* Highlight for the NEXT meal */
+.meal-item-card.next-meal {
+    border-color: #ff9800 !important;
+    background: linear-gradient(135deg, #fff7e6, #fff0cc) !important;
+    box-shadow: 0 6px 15px rgba(255, 152, 0, 0.3);
+}
+
+
+/* Meal title styling */
+.meal-title {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Align left */
+    gap: 0.7rem;
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1.25rem; /* Larger font */
+    margin-bottom: 0.3rem;
+}
+
+/* Meal icon */
+.meal-icon {
+    font-size: 1.5rem;
+}
+
+/* Meal text */
+.menu-card .meal-content {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333333;
+    text-align: left;
+}
+
+/* Blinking light */
+.blinking-light {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+/* --- Quick Rating Widget (for Ended Meals) --- */
+.quick-rating-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #cccccc;
+}
+
+.quick-rating-container .star-button {
+    font-size: 1.4rem;
+}
+
+/* --- Pause Service Button --- */
+.pause-service-tab.tab-card {
+    background: #fdecea;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+}
+
+.pause-service-tab.tab-card:hover {
+    background: #f7d4d8;
+    color: #58151c;
+    box-shadow: 0 6px 16px rgba(132, 32, 41, 0.2);
+}
+
+/* --- FEEDBACK FORM --- (Retained styles are fine) */
+.feedback-form {
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    padding: 2rem;
+    text-align: center;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* === RESPONSIVE === */
 @media (max-width: 768px) {
     .food-container {
         padding: 1rem;
     }
-
-    .tab-card {
-        padding: 0.7rem 0.4rem;
-        min-height: 65px;
-        gap: 0.3rem;
+    .menu-card {
+        padding: 1.5rem 1rem;
     }
-
-    .tab-icon {
+    .food-header h2 {
+        font-size: 1.8rem;
+    }
+    .meal-item-card {
+        padding: 1rem !important;
+    }
+    .meal-title {
         font-size: 1.1rem;
     }
-
-    .tab-text {
-        font-size: 0.7rem;
-    }
-
-    .menu-card, .feedback-form {
-        padding: 1.5rem;
-    }
-
-    .food-header h2 {
-        font-size: 1.5rem;
-    }
-
-    /* Legacy tab styles */
-    .tab {
-        padding: 0.8rem 1rem;
-        font-size: 0.9rem;
+    /* Hide progress line on mobile to simplify layout */
+    .progress-line, .meal-status-dot {
+        display: none;
     }
 }
 
-@media (max-width: 480px) {
-    .food-container {
-        padding: 0.5rem;
-    }
+/* --- WEEKLY SCHEDULE VIEWER STYLES --- */
+/* (Assuming FoodScheduleViewer is a dedicated component but adding core styles for a card-based system) */
 
-    .tab-card {
-        padding: 0.6rem 0.3rem;
-        min-height: 60px;
-        gap: 0.25rem;
-    }
+.weekly-schedule-container {
+    padding: 2rem;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
 
-    .tab-icon {
-        font-size: 1rem;
-    }
+.schedule-header h3 {
+    color: #4364f7;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
 
-    .tab-text {
-        font-size: 0.65rem;
-        font-weight: 600;
-    }
+.day-card {
+    background: #f7f7f7;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 5px solid #cccccc;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
 
-    .menu-card, .feedback-form {
-        padding: 1rem;
-    }
+.day-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left-color: #6fb1fc;
+    transform: translateY(-2px);
+}
 
-    .food-header h2 {
-        font-size: 1.3rem;
-    }
+.day-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
 
-    /* Legacy tab styles */
-    .tab-container {
-        justify-content: center;
-    }
-    .tab {
-        flex-grow: 1;
-        justify-content: center;
-        padding: 0.75rem 0.5rem;
-    }
+.day-card-header h5 {
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.day-card-content p {
+    margin: 0.5rem 0;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+.day-card-content strong {
+    font-weight: 600;
+    color: #007a8c;
+    margin-right: 0.5rem;
 }

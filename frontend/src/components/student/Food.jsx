@@ -2,8 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import useCurrentUser from '../../hooks/student/useCurrentUser';
 import FoodPauseManager from './FoodPauseManager';
-import FoodScheduleViewer, { getTodaysMenuFromSchedule } from './FoodScheduleViewer';
+import FoodScheduleViewer from './FoodScheduleViewer';
 import '../../styles/student/Food.css';
+
+// --- START: SHARED CONSTANTS AND HELPERS ---
 
 // Meal timings (24hr format)
 const mealTimings = {
@@ -12,6 +14,16 @@ const mealTimings = {
     snacks: { start: "16:30", end: "18:30" },
     dinner: { start: "19:30", end: "21:00" }
 };
+
+// Meal icons mapping
+const mealIcons = {
+    breakfast: "🍳",
+    lunch: "🍚",
+    snacks: "☕",
+    dinner: "🌙"
+};
+
+const getMealIcon = (meal) => mealIcons[meal] || '🍽️';
 
 // Helper to get status and color
 const getMealStatus = (meal) => {
@@ -32,52 +44,75 @@ const getMealStatus = (meal) => {
     if (now >= end) return { color: "red", status: "Ended" };
 };
 
+// Helper to determine the *next* meal for highlighting
+const getNextMeal = () => {
+    const now = new Date();
+    const meals = ['breakfast', 'lunch', 'snacks', 'dinner'];
+    for (const meal of meals) {
+        const [startH, startM] = mealTimings[meal].start.split(":").map(Number);
+        const start = new Date(now);
+        start.setHours(startH, startM, 0, 0);
+        const mealStatus = getMealStatus(meal);
+
+        if (now < start || mealStatus.status === 'Started' || mealStatus.status === 'Ending soon') return meal;
+    }
+    return null; // All meals have ended
+};
+
 // Blinking light component
-const BlinkingLight = ({ color }) => (
+const BlinkingLight = React.memo(({ color }) => (
     <span
         className="blinking-light"
         style={{
             background: color,
-            animation: color !== 'gray' ? 'blink 1s infinite' : 'none',
+            animation: color !== 'gray' ? 'pulse-light 1s infinite' : 'none',
             boxShadow: color !== 'gray' ? `0 0 8px 2px ${color}` : 'none'
         }}
     />
-);
+));
+// --- END: SHARED CONSTANTS AND HELPERS ---
+
 
 const Food = () => {
+    // --- START: STATE ---
     const { user, loading: userLoading } = useCurrentUser();
     const [menu, setMenu] = useState(null);
     const [menuLoading, setMenuLoading] = useState(false);
-
-    const [schedule, setSchedule] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [schedule, setSchedule] = useState([]); 
+    const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('menu');
-    // Feedback form state
     const [mealType, setMealType] = useState('breakfast');
     const [rating, setRating] = useState(5);
     const [feedback, setFeedback] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [quickRating, setQuickRating] = useState({ meal: null, rating: 0, submitted: false });
+    const [submittedQuickRatings, setSubmittedQuickRatings] = useState({});
+    // --- END: STATE ---
 
-    // Add blinking animation to document head (once)
+
+    // --- START: CORE LOGIC & HANDLERS ---
     useEffect(() => {
-        if (!document.getElementById('blink-keyframes')) {
+        if (!document.getElementById('pulse-light-keyframes')) { 
             const style = document.createElement('style');
-            style.id = 'blink-keyframes';
+            style.id = 'pulse-light-keyframes';
             style.innerHTML = `
-                @keyframes blink {
-                    0% { opacity: 1; }
-                    50% { opacity: 0.3; }
-                    100% { opacity: 1; }
+                @keyframes pulse-light {
+                    0% { opacity: 1; box-shadow: 0 0 4px 1px var(--color); }
+                    50% { opacity: 0.4; box-shadow: 0 0 8px 3px var(--color); }
+                    100% { opacity: 1; box-shadow: 0 0 4px 1px var(--color); }
                 }
+                .blinking-light[style*="green"] { --color: #007a8c; } 
+                .blinking-light[style*="orange"] { --color: #ff9800; } 
+                .blinking-light[style*="red"] { --color: #dc3545; } 
+                .blinking-light[style*="gray"] { --color: #6c757d; } 
             `;
             document.head.appendChild(style);
         }
     }, []);
 
     useEffect(() => {
-        fetchSchedule();
         fetchTodaysMenu();
     }, []);
 
@@ -93,24 +128,6 @@ const Food = () => {
             setMenu(null);
         } finally {
             setMenuLoading(false);
-        }
-    };
-
-    const fetchSchedule = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/weekly-schedule`);
-            setSchedule(response.data);
-        } catch (err) {
-            let errorMsg = "Failed to load menu schedule. Please try again later.";
-            if (err.response && err.response.data && err.response.data.message) {
-                errorMsg += `\nDetails: ${err.response.data.message}`;
-            } else if (err.message) {
-                errorMsg += `\nDetails: ${err.message}`;
-            }
-            setError(errorMsg);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -153,19 +170,122 @@ const Food = () => {
         }
     };
 
+    const handleQuickRating = async (meal, ratingValue) => {
+        if (submittedQuickRatings[meal] || (quickRating.meal === meal && quickRating.submitted)) return;
+
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+
+        setSubmittedQuickRatings(prev => ({
+            ...prev,
+            [meal]: ratingValue 
+        }));
+
+        setQuickRating({ meal: meal, rating: ratingValue, submitted: true });
+        
+        setTimeout(() => {
+            setQuickRating(prev => (prev.meal === meal ? { meal: null, rating: 0, submitted: false } : prev));
+        }, 2500); 
+    };
+    // --- END: CORE LOGIC & HANDLERS ---
+
+
+    // --- START: RENDER HELPERS ---
     const renderStarRating = () => {
+        const isCurrentMealValid = canSubmitFeedback(mealType);
         return (
-            <div className="rating-container">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                        key={star}
-                        type="button"
-                        className={`star-button ${star <= rating ? 'active-star' : ''}`}
-                        onClick={() => setRating(star)}
-                    >
-                        ★
-                    </button>
-                ))}
+            <div 
+  className={`rating-container ${!isCurrentMealValid ? 'text-muted' : ''}`} 
+  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}
+>
+  {[1, 2, 3, 4, 5].map((star) => (
+    <button
+      key={star}
+      type="button"
+      className="star-button btn p-0"
+      onClick={() => setRating(star)}
+      disabled={!isCurrentMealValid}
+      style={{
+        background: 'none',
+        border: 'none',
+        fontSize: '2rem',
+        cursor: 'pointer',
+        color: '#ff9800',
+        outline: 'none'
+      }}
+    >
+      <span style={{ fontWeight: 900 }}>
+        {star <= rating ? '★' : '☆'}
+      </span>
+    </button>
+  ))}
+</div>
+
+        );
+    };
+
+    const renderRatingWidget = (meal) => {
+        const status = getMealStatus(meal);
+        const hasBeenRated = !!submittedQuickRatings[meal]; 
+        const currentSubmittedRating = submittedQuickRatings[meal] || 0;
+
+        const canRateNow = status.status === 'Ended' && !hasBeenRated;
+        
+        const displayRating = (quickRating.meal === meal && quickRating.submitted) 
+            ? quickRating.rating 
+            : currentSubmittedRating;
+        
+        const isShowingMessage = quickRating.meal === meal && quickRating.submitted;
+        
+        const starColor = canRateNow ? '#ff9800' : '#cccccc';
+        
+        return (
+            <div className="quick-rating-container mt-2" style={{ borderTop: '1px dashed #ccc', paddingTop: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', minHeight: '30px' }}>
+                    <span style={{ marginRight: '10px', fontSize: '0.9rem', color: '#555' }}>Rate:</span>
+                    
+                    {[1, 2, 3, 4, 5].map(star => {
+                        const isFilled = star <= displayRating;
+                        
+                        return (
+                            <button
+                                key={star}
+                                type="button"
+                                className="star-button btn p-0"
+                                onClick={() => canRateNow && handleQuickRating(meal, star)}
+                                disabled={!canRateNow} 
+                                style={{ 
+                                    background: 'none', 
+                                    border: 'none', 
+                                    fontSize: '1.4rem', 
+                                    cursor: canRateNow ? 'pointer' : 'default', 
+                                    color: starColor, 
+                                    outline: 'none'
+                                }} 
+                            >
+                                <span style={{ fontWeight: 900 }}>
+                                    {isFilled ? '★' : '☆'}
+                                </span>
+                            </button>
+                        );
+                    })}
+
+                    {isShowingMessage && (
+                        <div className="text-success ms-2" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                             <i className="bi bi-check-circle-fill me-1"></i>Rating Submitted!
+                        </div>
+                    )}
+                </div>
+
+                {!isShowingMessage && hasBeenRated && (
+                     <div className="text-info mt-1" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                        <i className="bi bi-star-fill me-1"></i>Rated {currentSubmittedRating} Stars
+                    </div>
+                )}
+                {!isShowingMessage && !hasBeenRated && status.status === 'Not started' && (
+                    <small className="text-muted mt-1" style={{ fontSize: '0.8rem', display: 'block' }}>
+                        *Available after the meal starts.
+                    </small>
+                )}
             </div>
         );
     };
@@ -181,261 +301,302 @@ const Food = () => {
         });
     };
 
+    const nextMeal = getNextMeal();
+    // --- END: RENDER HELPERS ---
+
+
+    // --- START: MAIN RENDER WITH CUSTOM UI STYLE ---
+
+    const tabs = [
+        { id: 'menu', text: 'Today\'s Menu', icon: 'bi-calendar-check', isPause: false },
+        { id: 'feedback', text: 'Give Feedback', icon: 'bi-chat-dots', isPause: false },
+        { id: 'schedule', text: 'Weekly Schedule', icon: 'bi-calendar-week', isPause: false },
+        { id: 'pause', text: 'Pause Service', icon: 'bi-slash-circle', isPause: true }
+    ];
+    
+    const badgeColorMap = {
+        'gray': 'bg-secondary',
+        'green': 'bg-info',    
+        'orange': 'bg-warning', 
+        'red': 'bg-danger'      
+    };
+
+    const renderTabButton = (tab) => {
+        const { id, text, icon, isPause } = tab;
+        const isActive = activeTab === id;
+
+        const defaultStyle = {
+            background: '#FFFFFF',
+            border: `1px solid ${isActive ? '#4364f7' : isPause ? '#f5c2c7' : '#dee2e6'}`,
+            borderRadius: '28px',
+            padding: '0.8rem 1.8rem',
+            cursor: 'pointer',
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.6rem',
+            color: isActive ? '#4364f7' : isPause ? '#842029' : '#343a40',
+            boxShadow: isActive
+                ? `0 0 0 1px ${isPause ? '#dc3545' : '#4364f7'}, 0 4px 12px rgba(67,100,247,0.2)`
+                : isPause
+                    ? '0 4px 12px rgba(132,32,41,0.1)'
+                    : '0 4px 12px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s ease',
+            width: '100%',
+            transform: isActive ? 'scale(1.02)' : 'none', 
+        };
+
+        const hoverBoxShadow = isPause
+            ? '0 0 0 3px rgba(220, 53, 69, 0.3), 0 6px 16px rgba(132, 32, 41, 0.15)'
+            : '0 0 0 3px rgba(67, 100, 247, 0.3), 0 6px 16px rgba(0, 0, 0, 0.15)';
+        const hoverBorderColor = isPause ? '#dc3545' : '#4364f7';
+        const hoverColor = isPause ? '#58151c' : '#343a40';
+        
+        const applyHover = (e) => {
+             e.currentTarget.style.transform = 'scale(1.02)';
+             e.currentTarget.style.boxShadow = hoverBoxShadow;
+             e.currentTarget.style.borderColor = hoverBorderColor;
+             e.currentTarget.style.color = hoverColor;
+        };
+
+        const removeHover = (e) => {
+            if (activeTab !== id) {
+                e.currentTarget.style.transform = 'none';
+                e.currentTarget.style.boxShadow = isPause ? '0 4px 12px rgba(132,32,41,0.1)' : '0 4px 12px rgba(0,0,0,0.1)';
+                e.currentTarget.style.borderColor = isPause ? '#f5c2c7' : '#dee2e6';
+                e.currentTarget.style.color = isPause ? '#842029' : '#343a40';
+            } else {
+                e.currentTarget.style.transform = 'scale(1.02)';
+                e.currentTarget.style.boxShadow = isActive ? `0 0 0 1px ${isPause ? '#dc3545' : '#4364f7'}, 0 4px 12px rgba(67,100,247,0.2)` : defaultStyle.boxShadow;
+                e.currentTarget.style.borderColor = isPause ? '#dc3545' : '#4364f7';
+                e.currentTarget.style.color = isPause ? '#842029' : '#4364f7';
+            }
+        };
+
+        return (
+            <div className="col-6 col-md-3">
+                <div
+                    onClick={() => setActiveTab(id)}
+                    onMouseEnter={applyHover}
+                    onMouseLeave={removeHover}
+                    style={defaultStyle}
+                >
+                    <i className={`bi ${icon}`} style={{ fontSize: '1.1rem' }}></i>
+                    <span style={{ fontSize: '1rem', fontWeight: 600 }}>{text}</span>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="food-container">
             <div className="food-header">
                 <h2>Hostel Food Menu & Feedback</h2>
+                {user && <p>Welcome, {user.name}! Don't forget to rate your finished meals.</p>}
             </div>
+
+            {/* Tabs (Custom UI) */}
             <div className="tab-container">
-                <div className="row g-2 w-100">
-                    <div className="col-6 col-md-3">
-                        <div
-                            className={`tab-card ${activeTab === 'menu' ? 'active-tab-card' : ''}`}
-                            onClick={() => setActiveTab('menu')}
-                        >
-                            <i className="bi bi-list tab-icon"></i>
-                            <span className="tab-text">Today's Menu</span>
-                        </div>
-                    </div>
-                    <div className="col-6 col-md-3">
-                        <div
-                            className={`tab-card ${activeTab === 'feedback' ? 'active-tab-card' : ''}`}
-                            onClick={() => setActiveTab('feedback')}
-                        >
-                            <i className="bi bi-chat-dots tab-icon"></i>
-                            <span className="tab-text">Feedback</span>
-                        </div>
-                    </div>
-                    <div className="col-6 col-md-3">
-                        <div
-                            className={`tab-card ${activeTab === 'schedule' ? 'active-tab-card' : ''}`}
-                            onClick={() => setActiveTab('schedule')}
-                        >
-                            <i className="bi bi-calendar-week tab-icon"></i>
-                            <span className="tab-text">Meal Schedule</span>
-                        </div>
-                    </div>
-                    <div className="col-6 col-md-3">
-                        <div
-                            className={`tab-card ${activeTab === 'pause' ? 'active-tab-card' : ''}`}
-                            onClick={() => setActiveTab('pause')}
-                        >
-                            <i className="bi bi-pause-circle tab-icon"></i>
-                            <span className="tab-text">Pause Service</span>
-                        </div>
-                    </div>
+                <div className="row g-2 w-100 mx-auto">
+                    {tabs.map(renderTabButton)}
                 </div>
             </div>
-            {/*menu tab*/}
+
+            {/* --- Today's Menu Tab (Restored) --- */}
             {activeTab === 'menu' && (
-                <div>
+                <div className="menu-card">
                     {menuLoading ? (
                         <div className="text-center my-4">
-                            <div className="spinner-border text-primary" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </div>
+                            <div className="spinner-border text-primary" role="status"></div>
                             <p className="mt-2">Loading today's menu...</p>
                         </div>
                     ) : menu ? (
-                        <div className="menu-card">
-                            <h3 className="mb-3">
-                               Today's Menu - {formatDate(menu.date)}
-                            </h3>
-                            <div className='card' style={{border: '1px solid whitesmoke',boxShadow: '0 4px 12px rgba(0,0,0,0.5)', padding: '1rem',borderRadius: '10px'}}>
-                                <div className="row g-3">
-                                    <div className="col-12 col-md-6">
-                                        <div className='card' style={{border: '1px solid whitesmoke',boxShadow: '0 4px 12px rgba(0,0,0,0.4)', padding: '1rem',borderRadius: '10px'}} >
-                                            <div className="meal-title">
-                                                <BlinkingLight color={getMealStatus('breakfast').color} />
-                                                Breakfast
-                                                <small className="ms-2 text-muted">({getMealStatus('breakfast').status})</small>
-                                            </div>
-                                            <p className="mb-0">{menu.breakfast || 'Not available'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="col-12 col-md-6">
-                                        <div className='card' style={{border: '1px solid whitesmoke',boxShadow: '0 4px 12px rgba(0,0,0,0.4)', padding: '1rem',borderRadius: '10px'}} >
-                                            <div className="meal-title">
-                                                <BlinkingLight color={getMealStatus('lunch').color} />
-                                                Lunch
-                                                <small className="ms-2 text-muted">({getMealStatus('lunch').status})</small>
-                                            </div>
-                                            <p className="mb-0">{menu.lunch || 'Not available'}</p>
-                                        </div>
-                                    </div>
-                                    {menu.snacks && (
-                                        <div className="col-12 col-md-6">
-                                            <div className='card' style={{border: '1px solid whitesmoke',boxShadow: '0 4px 12px rgba(0,0,0,0.4)', padding: '1rem',borderRadius: '10px'}} >
-                                                <div className="meal-title">
-                                                    <BlinkingLight color={getMealStatus('snacks').color} />
-                                                    Snacks
-                                                    <small className="ms-2 text-muted">({getMealStatus('snacks').status})</small>
-                                                </div>
-                                                <p className="mb-0">{menu.snacks}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                    <div className="col-12 col-md-6">
-                                        <div className='card' style={{border: '1px solid whitesmoke',boxShadow: '0 4px 12px rgba(0,0,0,0.4)', padding: '1rem',borderRadius: '10px'}} >
-                                            <div className="meal-title">
-                                                <BlinkingLight color={getMealStatus('dinner').color} />
-                                                Dinner
-                                                <small className="ms-2 text-muted">({getMealStatus('dinner').status})</small>
-                                            </div>
-                                            <p className="mb-0">{menu.dinner || 'Not available'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="alert alert-warning">
-                            <i className="bi bi-exclamation-triangle me-2"></i>
-                            No menu available for today. Please check back later.
-                        </div>
-                    )}
-                </div>
-            )}
-            {/* Feedback Form */}
-            {activeTab === 'feedback' && (
-                <div>
-                    {menuLoading ? (
-                        <div className="text-center my-4">
-                            <div className="spinner-border text-primary" role="status">
-                                <span className="visually-hidden">Loading...</span>
-                            </div>
-                            <p className="mt-2">Loading today's menu...</p>
-                        </div>
-                    ) : menu ? (
-                        <div>
-                            {/* Today's Menu Display for Feedback */}
-                            <div className="card mb-4">
-                                <div className="card-header bg-info text-white">
-                                    <h5 className="mb-0">
-                                        <i className="bi bi-calendar-day me-2"></i>
-                                        Today's Menu - {formatDate(menu.date)}
-                                    </h5>
-                                </div>
-                                <div className="card-body">
-                                    <div className="row g-2">
-                                        {['breakfast', 'lunch', 'snacks', 'dinner'].map((meal) => {
-                                            if (!menu[meal]) return null;
-                                            const status = getMealStatus(meal);
-                                            return (
-                                                <div key={meal} className="col-12 col-sm-6 col-lg-3">
-                                                    <div className={`card h-100 ${status.status === 'Not started' ? 'border-secondary' : status.status === 'Ended' ? 'border-danger' : 'border-success'}`}>
-                                                        <div className="card-body p-2">
-                                                            <div className="d-flex align-items-center mb-2">
-                                                                <BlinkingLight color={status.color} />
-                                                                <h6 className="mb-0 text-capitalize ms-2">{meal}</h6>
-                                                            </div>
-                                                            <p className="small mb-1">{menu[meal]}</p>
-                                                            <small className={`badge ${status.status === 'Not started' ? 'bg-secondary' : status.status === 'Ended' ? 'bg-danger' : 'bg-success'}`}>
+                        <>
+                            <h3>Today's Menu - {formatDate(menu.date)}</h3>
+                            <div className="row g-4">
+                                {['breakfast','lunch','snacks','dinner'].map(meal => {
+                                    if(!menu[meal]) return null;
+                                    const status = getMealStatus(meal);
+                                    const isNextMeal = meal===getNextMeal() && status.status!=='Ended';
+                                    
+                                    const badgeClass = badgeColorMap[status.color] || 'bg-secondary';
+                                    
+                                    return (
+                                        <div key={meal} className="col-12 col-md-6 d-flex h-100 mb-4">
+                                            <div 
+                                                className={`meal-item-card w-100 ${isNextMeal ? 'next-meal' : ''}`}
+                                                style={{
+                                                    border: '1px solid whitesmoke',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)', 
+                                                    padding: '1rem',
+                                                    borderRadius: '10px',
+                                                    display: 'flex', 
+                                                    flexDirection: 'column',
+                                                    justifyContent: 'space-between'
+                                                }}
+                                            >
+                                                <div className="card-body p-0 d-flex flex-column justify-content-between h-100">
+                                                    <div>
+                                                        <div className="meal-title d-flex align-items-center justify-content-start mb-1" >
+                                                            <span className="meal-icon me-2" style={{fontSize:'1.2rem'}}>{getMealIcon(meal)}</span>
+                                                            <BlinkingLight color={status.color} />
+                                                            <h6 className="mb-0 ms-1 text-capitalize">{meal}</h6>
+                                                            <small className={`ms-2 badge ${badgeClass}`}>
                                                                 {status.status}
                                                             </small>
                                                         </div>
+                                                        
+                                                        <p className="meal-content mb-1 ps-4">{menu[meal]}</p>
                                                     </div>
+                                                    
+                                                    {renderRatingWidget(meal)}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
                             </div>
-
-                            {/* Feedback Form */}
-                            <form className="feedback-form" onSubmit={handleSubmitFeedback}>
-                                {submitSuccess && (
-                                    <div className="alert alert-success">
-                                        <i className="bi bi-check-circle me-2"></i>
-                                        Feedback submitted successfully!
-                                    </div>
-                                )}
-                                {error && (
-                                    <div className="alert alert-danger">
-                                        <i className="bi bi-exclamation-triangle me-2"></i>
-                                        {error}
-                                    </div>
-                                )}
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Meal Type</label>
-                                    <div className="dropdown-container">
-                                        <select
-                                            className="form-select"
-                                            value={mealType}
-                                            onChange={(e) => setMealType(e.target.value)}
-                                            disabled={submitting}
-                                            style={{ maxWidth: '100%', overflow: 'hidden' }}
-                                        >
-                                            {['breakfast', 'lunch', 'snacks', 'dinner'].map(meal => {
-                                                if (!menu[meal]) return null;
-                                                const canSubmit = canSubmitFeedback(meal);
-                                                return (
-                                                    <option key={meal} value={meal} disabled={!canSubmit}>
-                                                        {meal.charAt(0).toUpperCase() + meal.slice(1)} 
-                                                        {!canSubmit ? ' (Not started)' : ''}
-                                                    </option>
-                                                );
-                                            })}
-                                        </select>
-                                    </div>
-                                    {!canSubmitFeedback(mealType) && (
-                                        <small className="text-warning">
-                                            <i className="bi bi-clock me-1"></i>
-                                            Feedback available after meal starts.
-                                        </small>
-                                    )}
-                                </div>
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Rating</label>
-                                    {renderStarRating()}
-                                </div>
-                                <div className="form-group mb-3">
-                                    <label className="form-label">Feedback</label>
-                                    <textarea
-                                        className="form-control"
-                                        value={feedback}
-                                        onChange={(e) => setFeedback(e.target.value)}
-                                        disabled={submitting || !canSubmitFeedback(mealType)}
-                                        required
-                                        rows="3"
-                                        placeholder="Share your thoughts about the meal..."
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    disabled={submitting || !canSubmitFeedback(mealType)}
-                                >
-                                    {submitting ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                                            Submitting...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <i className="bi bi-send me-2"></i>
-                                            Submit Feedback
-                                        </>
-                                    )}
-                                </button>
-                            </form>
-                        </div>
-                    ) : (
-                        <div className="alert alert-warning">
-                            <i className="bi bi-exclamation-triangle me-2"></i>
-                            No menu available for today. Cannot submit feedback.
-                        </div>
-                    )}
+                        </>
+                    ) : <div className="alert alert-warning">No menu available today.</div>}
                 </div>
             )}
 
-            {activeTab === 'schedule' && (
-                <FoodScheduleViewer />
+            {/* --- Feedback Form Tab (DEFINITIVE ALIGNMENT FIX) --- */}
+            {activeTab === 'feedback' && (
+                <form className="feedback-form" onSubmit={handleSubmitFeedback} style={{ maxWidth: '900px', padding: '2rem' }}>
+                    
+                    <h4 className='mb-4' style={{color:'#4364f7'}}>Submit Detailed Meal Feedback</h4>
+                    
+                    {submitSuccess && <div className="alert alert-success">Feedback submitted successfully!</div>}
+                    {error && (
+                        <div className="alert alert-danger">
+                            <i className="bi bi-exclamation-triangle me-2"></i>
+                            {error}
+                        </div>
+                    )}
+
+                    {/* ALIGNED INPUT GROUP: Fixed vertical alignment and visual spacing */}
+                    <div className="row mb-4 g-4 d-flex align-items-start">
+                        
+                        {/* 1. Meal Selection (Col-4) */}
+                        <div className="col-12 col-md-4">
+                            <label className="form-label d-block text-start fw-bold mb-2">Select Meal</label>
+                            <select
+                                className="form-select form-select-lg"
+                                value={mealType}
+                                onChange={(e) => setMealType(e.target.value)}
+                                disabled={submitting} 
+                                // FIX: Removed vertical padding from select to ensure it aligns with the boxes' top padding
+                                style={{ height: '56px', border: '2px solid #ced4da', padding: '0.375rem 1rem' }} 
+                            >
+                                {menu ? ['breakfast', 'lunch', 'snacks', 'dinner'].map(meal => {
+                                    if (!menu?.[meal]) return null;
+                                    const canSubmit = canSubmitFeedback(meal);
+                                    return (
+                                        <option key={meal} value={meal} disabled={!canSubmit}>
+                                            {meal.charAt(0).toUpperCase() + meal.slice(1)} 
+                                            {!canSubmit ? ' (Not ready)' : ''}
+                                        </option>
+                                    );
+                                }) : <option>Loading...</option>}
+                            </select>
+                            <div className="mt-2 text-start">
+                                <small className="text-muted d-inline-block me-2">Status:</small>
+                                <span className={`badge ${badgeColorMap[getMealStatus(mealType).color]}`}>{getMealStatus(mealType).status}</span>
+                            </div>
+                        </div>
+                        
+                        {/* 2. Your Rating (Col-4) - BOLD styling applied, centered vertically */}
+                        <div className="col-12 col-md-4">
+                            <label className="form-label d-block text-start fw-bold mb-2">Your Rating</label>
+                            <div
+  className="border rounded d-flex align-items-center justify-content-start w-100 pl-[100px]"
+  style={{
+    minHeight: '56px',
+    borderColor: '#ff9800',
+    borderWidth: '2px',
+    fontWeight: 'bold',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    position: 'sticky',
+    top: '0',           // keeps it visible at top on scroll
+    backgroundColor: 'white', // needed for sticky
+    zIndex: 10
+  }}
+                            >
+                                {renderStarRating()}
+                            </div>
+                            
+                            {!canSubmitFeedback(mealType) && (
+                                <small className="text-danger d-block mt-2 text-start">
+                                    <i className="bi bi-x-circle me-1"></i>Rating disabled.
+                                </small>
+                            )}
+                        </div>
+
+                        {/* 3. Today's Dishes (Col-4) - BOLD styling applied, min-height aligns it with select input */}
+                        <div className="col-12 col-md-4">
+                            <label className="form-label d-block text-start fw-bold mb-2">Today's Dishes</label>
+                            <div 
+                                className="p-3 border rounded w-100" 
+                                style={{ 
+                                    minHeight: '56px', /* Matches height of select input */
+                                    background: '#f8f9fa',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    borderColor: '#ced4da', 
+                                    borderWidth: '2px', 
+                                    fontWeight: 'bold', 
+                                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' 
+                                }} 
+                            >
+                                <p className="mb-0 text-muted">{menu?.[mealType] || 'Menu details unavailable'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {/* END ALIGNED INPUT GROUP */}
+
+                    {/* Detailed Feedback */}
+                    <div className="form-group mb-4">
+                        <label className="form-label d-block text-start fw-bold mb-2">Your Experience (Optional)</label>
+                        <textarea
+                            className="form-control"
+                            value={feedback}
+                            onChange={(e) => setFeedback(e.target.value)}
+                            disabled={submitting || !canSubmitFeedback(mealType)}
+                            rows="4"
+                            placeholder={`Share specific comments about the ${mealType} meal (taste, quantity, quality, etc.)`}
+                        />
+                    </div>
+                    
+                    {/* Submission Button */}
+                    <div className="d-grid">
+                        <button
+                            type="submit"
+                            className="btn btn-primary btn-lg"
+                            disabled={submitting || !canSubmitFeedback(mealType)}
+                        >
+                            {submitting ? (
+                                <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    Submitting Feedback...
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-send me-2"></i>
+                                    Submit Final Feedback
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
             )}
 
-            {activeTab === 'pause' && (
-                <FoodPauseManager />
-            )}
+            {/* --- Schedule Tab --- */}
+            {activeTab === 'schedule' && <FoodScheduleViewer />}
+            
+            {/* --- Pause Service Tab --- */}
+            {activeTab === 'pause' && <FoodPauseManager />}
         </div>
     );
 };
