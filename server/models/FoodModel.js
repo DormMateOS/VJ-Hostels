@@ -98,10 +98,20 @@ const weeklyFoodMenuSchema = new mongoose.Schema({
 
 // Food Feedback Schema
 const foodFeedbackSchema = new mongoose.Schema({
+    student_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Student',
+        required: true
+    },
     date: {
         type: Date,
         required: true,
         default: Date.now
+    },
+    // normalized date string for uniqueness (YYYY-MM-DD)
+    dateStr: {
+        type: String,
+        required: true
     },
     mealType: {
         type: String,
@@ -121,6 +131,9 @@ const foodFeedbackSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// Ensure uniqueness per student, mealType and date (dateStr normalized)
+foodFeedbackSchema.index({ student_id: 1, mealType: 1, dateStr: 1 }, { unique: true });
 
 const FoodMenu = mongoose.model('FoodMenu', foodMenuSchema);
 const WeeklyFoodMenu = mongoose.model('WeeklyFoodMenu', weeklyFoodMenuSchema);

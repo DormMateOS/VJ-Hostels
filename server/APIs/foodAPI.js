@@ -88,7 +88,7 @@ foodApp.post('/admin/menu', verifyAdmin, expressAsyncHandler(async (req, res) =>
 // Get all feedback
 foodApp.get('/admin/feedback', verifyAdmin, expressAsyncHandler(async (req, res) => {
     try {
-        const feedback = await FoodFeedback.find().sort({ createdAt: -1 });
+        const feedback = await FoodFeedback.find().populate('student_id', 'rollNumber name').sort({ createdAt: -1 });
         res.status(200).json(feedback);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -120,20 +120,24 @@ foodApp.get('/admin/feedback/stats', verifyAdmin, expressAsyncHandler(async (req
             { $sort: { _id: 1 } }
         ]);
         
-        // Get recent feedback trends (last 7 days)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        
+        // Get recent feedback trends (last 7 days) using normalized dateStr
+        const recentDatesSet = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            recentDatesSet.push(d.toISOString().split('T')[0]);
+        }
+
         const recentTrends = await FoodFeedback.aggregate([
             {
                 $match: {
-                    createdAt: { $gte: sevenDaysAgo }
+                    dateStr: { $in: recentDatesSet }
                 }
             },
             {
                 $group: {
                     _id: {
-                        date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                        date: "$dateStr",
                         mealType: "$mealType"
                     },
                     averageRating: { $avg: "$rating" }
@@ -292,23 +296,51 @@ foodApp.get('/student/menu/today', expressAsyncHandler(async (req, res) => {
 }));
 
 // Submit food feedback
+// Expects: { studentId: <rollNumber or ObjectId>, mealType, rating, feedback }
 foodApp.post('/student/feedback', expressAsyncHandler(async (req, res) => {
     try {
-        const { mealType, rating, feedback } = req.body;
-        
-        // Create new feedback without storing student details
+        const { studentId, mealType, rating, feedback } = req.body;
+
+        if (!studentId || !mealType || !rating) {
+            return res.status(400).json({ message: 'studentId, mealType and rating are required' });
+        }
+
+        // Resolve student: allow rollNumber or _id
+        let student = null;
+        if (/^[0-9a-fA-F]{24}$/.test(String(studentId))) {
+            student = await StudentModel.findById(studentId);
+        }
+        if (!student) {
+            student = await StudentModel.findOne({ rollNumber: studentId });
+        }
+        if (!student) return res.status(404).json({ message: 'Student not found' });
+
+        // Today's normalized date string
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const newFeedback = new FoodFeedback({
+        const dateStr = today.toISOString().split('T')[0];
+
+        // Upsert feedback for (student_id, mealType, dateStr)
+        const update = {
+            student_id: student._id,
             mealType,
             rating,
-            feedback,
-            date: today
-        });
-        await newFeedback.save();
-        res.status(201).json({ message: "Feedback submitted successfully", feedback: newFeedback });
+            feedback: feedback || '',
+            date: today,
+            dateStr
+        };
+
+        const opts = { new: true, upsert: true, setDefaultsOnInsert: true };
+
+        const saved = await FoodFeedback.findOneAndUpdate(
+            { student_id: student._id, mealType: mealType, dateStr: dateStr },
+            update,
+            opts
+        );
+
+        res.status(201).json({ message: 'Feedback submitted successfully', feedback: saved });
     } catch (error) {
+        // Handle unique index conflicts (should not happen due to upsert) and other errors
+        console.error('Error saving feedback:', error);
         res.status(500).json({ error: error.message });
     }
 }));
@@ -428,35 +460,13 @@ foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (r
         // Total number of students
         const totalStudents = await StudentModel.countDocuments();
 
-        // Find students who have paused any meal today
+        // Find students who have paused by checking the FoodPause collection
         const pausedStudents = await FoodPause.find({
-            $or: [
-                {
-                    // Paused indefinitely or for a period covering today
-                    pause_from: { $lte: today },
-                    // resume_from: null
-                },
-                // {
-                //     pause_from: { $lte: today },
-                //     resume_from: { $gte: tomorrow }
-                // }
-            ]
+            pause_from : { $lte: today },
+            resume_from: { $gte: today }
         });
-        // This query implements your exact logic.
-        // await FoodPause.find({
-            
-        //     // Corresponds to: `pause date should be <= today`
-        //     pause_from: { $lte: today },
-            
-        //     // Corresponds to: `and if(reume!=null) resumeDate >= today else directly consider`
-        //     $or: [
-        //         { resume_from: null },             // The 'else directly consider' part
-        //         { resume_from: { $gte: today } }   // The 'if(reume!=null) resumeDate >= today' part
-        //     ]
 
-        // });
-
-        let tiffinPaused = 0;
+        let breakfastPaused = 0;
         let lunchPaused = 0;
         let snacksPaused = 0;
         let dinnerPaused = 0;
@@ -464,7 +474,7 @@ foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (r
         const pausedStudentIds = pausedStudents.map(p => p.student_id.toString());
 
         for (const pause of pausedStudents) {
-            if (pause.pause_meals.includes('tiffin')) tiffinPaused++;
+            if (pause.pause_meals.includes('breakfast')) breakfastPaused++;
             if (pause.pause_meals.includes('lunch')) lunchPaused++;
             if (pause.pause_meals.includes('snacks')) snacksPaused++;
             if (pause.pause_meals.includes('dinner')) dinnerPaused++;
@@ -475,7 +485,7 @@ foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (r
 
         res.status(200).json({
             totalMealsToday,
-            tiffinPaused,
+            breakfastPaused,
             lunchPaused,
             snacksPaused,
             dinnerPaused

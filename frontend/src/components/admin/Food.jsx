@@ -81,6 +81,91 @@ const Food = () => {
     const [feedbackStats, setFeedbackStats] = useState(null);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
 
+    // Derived feedback views computed from raw `feedback` (client-side)
+    const getDateStr = (d) => new Date(d).toISOString().split('T')[0];
+
+    const mealTypes = ['breakfast', 'lunch', 'snacks', 'dinner'];
+
+    // Today's date string
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // Compute today's averages and rating distribution, plus recent 7-day trends
+    const {
+        todayAvgByMeal,
+        todayRatingDistribution,
+        totalTodayReviews,
+        recentTrendsFromFeedback,
+        recentDates,
+        recentByDate
+    } = (() => {
+        // Group reviews by date and meal
+        const byDateMeal = {}; // { 'YYYY-MM-DD': { mealType: [ratings] } }
+
+        feedback.forEach(f => {
+            // Ensure f.date exists and is parseable
+            const dateStr = f.date ? getDateStr(f.date) : null;
+            if (!dateStr) return;
+
+            // ignore future-dated reviews
+            if (dateStr > todayStr) return;
+
+            if (!byDateMeal[dateStr]) byDateMeal[dateStr] = {};
+            if (!byDateMeal[dateStr][f.mealType]) byDateMeal[dateStr][f.mealType] = [];
+            byDateMeal[dateStr][f.mealType].push(Number(f.rating));
+        });
+
+        // Today's averages
+        const todayAvg = {};
+        let totalToday = 0;
+        mealTypes.forEach(mt => {
+            const ratings = (byDateMeal[todayStr] && byDateMeal[todayStr][mt]) || [];
+            const count = ratings.length;
+            totalToday += count;
+            const avg = count ? ratings.reduce((a,b)=>a+b,0)/count : 0;
+            todayAvg[mt] = { averageRating: avg, count };
+        });
+
+        // Today's rating distribution (1-5)
+        const ratingDist = [0,0,0,0,0]; // indices 0->1star ... 4->5star
+        if (byDateMeal[todayStr]) {
+            Object.values(byDateMeal[todayStr]).forEach(arr => {
+                arr.forEach(r => {
+                    const idx = Math.min(Math.max(Math.round(r) - 1, 0), 4);
+                    ratingDist[idx]++;
+                });
+            });
+        }
+
+        // Recent 7 days including today: generate date strings from oldest to newest
+        const recentDates = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            recentDates.push(d.toISOString().split('T')[0]);
+        }
+
+        const recentTrends = [];
+        const recentByDate = {}; // { date: { mealType: avg|null } }
+        recentDates.forEach(date => {
+            recentByDate[date] = {};
+            mealTypes.forEach(mt => {
+                const ratings = (byDateMeal[date] && byDateMeal[date][mt]) || [];
+                const avg = ratings.length ? ratings.reduce((a,b)=>a+b,0)/ratings.length : null;
+                recentByDate[date][mt] = avg;
+                recentTrends.push({ _id: { date, mealType: mt }, averageRating: avg });
+            });
+        });
+
+        return {
+            todayAvgByMeal: todayAvg,
+            todayRatingDistribution: ratingDist,
+            totalTodayReviews: totalToday,
+            recentTrendsFromFeedback: recentTrends,
+            recentDates,
+            recentByDate
+        };
+    })();
+
     useEffect(() => {
         if (activeTab === 'menu') {
             fetchMenus();
@@ -661,16 +746,16 @@ const Food = () => {
                 <div>
                     {/* Feedback Statistics */}
                     <div className="row g-4 mb-4">
-                        {feedbackStats && feedbackStats.avgRatingsByMeal.map(stat => (
-                            <div className="col-md-3" key={stat._id}>
-                                <div className={`card bg-${getRatingColor(stat.averageRating)} text-white h-100`}>
+                        {mealTypes.map(mt => (
+                            <div className="col-md-3" key={mt}>
+                                <div className={`card bg-${getRatingColor(todayAvgByMeal[mt].averageRating)} text-white h-100`}>
                                     <div className="card-body">
-                                        <h5 className="card-title text-capitalize">{stat._id}</h5>
+                                        <h5 className="card-title text-capitalize">{mt}</h5>
                                         <div className="d-flex align-items-center">
-                                            <h2 className="display-4 me-2">{stat.averageRating.toFixed(1)}</h2>
-                                            {renderStars(stat.averageRating)}
+                                            <h2 className="display-4 me-2">{todayAvgByMeal[mt].count ? todayAvgByMeal[mt].averageRating.toFixed(1) : '—'}</h2>
+                                            {todayAvgByMeal[mt].count ? renderStars(todayAvgByMeal[mt].averageRating) : <small className="text-light">No reviews</small>}
                                         </div>
-                                        <p className="card-text">Based on {stat.count} reviews</p>
+                                        <p className="card-text">Based on {todayAvgByMeal[mt].count} reviews</p>
                                     </div>
                                 </div>
                             </div>
@@ -689,10 +774,10 @@ const Food = () => {
                                         <div style={{ height: '300px' }}>
                                             <Pie
                                                 data={{
-                                                    labels: feedbackStats.ratingDistribution.map(r => `${r._id} Stars`),
+                                                    labels: ['1 Stars','2 Stars','3 Stars','4 Stars','5 Stars'],
                                                     datasets: [
                                                         {
-                                                            data: feedbackStats.ratingDistribution.map(r => r.count),
+                                                            data: todayRatingDistribution,
                                                             backgroundColor: [
                                                                 '#dc3545', // 1 star - danger
                                                                 '#fd7e14', // 2 stars - orange
@@ -729,17 +814,18 @@ const Food = () => {
 
                                         {/* Progress bars for each rating */}
                                         <div className="mt-4">
-                                            {feedbackStats.ratingDistribution.map(rating => {
-                                                const percentage = (rating.count / feedback.length) * 100;
+                                            {todayRatingDistribution.map((count, idx) => {
+                                                const percentage = totalTodayReviews ? (count / totalTodayReviews) * 100 : 0;
+                                                const star = idx + 1;
                                                 return (
-                                                    <div className="mb-2" key={rating._id}>
+                                                    <div className="mb-2" key={star}>
                                                         <div className="d-flex justify-content-between mb-1">
-                                                            <span>{rating._id} Stars</span>
-                                                            <span>{rating.count} reviews ({percentage.toFixed(1)}%)</span>
+                                                            <span>{star} Stars</span>
+                                                            <span>{count} reviews ({percentage.toFixed(1)}%)</span>
                                                         </div>
                                                         <div className="progress" style={{ height: '10px' }}>
                                                             <div
-                                                                className={`progress-bar bg-${getRatingColor(rating._id)}`}
+                                                                className={`progress-bar bg-${getRatingColor(star)}`}
                                                                 role="progressbar"
                                                                 style={{ width: `${percentage}%` }}
                                                                 aria-valuenow={percentage}
@@ -762,12 +848,12 @@ const Food = () => {
                                     <div className="card-body">
                                         {/* Group trends by date and meal type for the chart */}
                                         {(() => {
-                                            // Process data for the chart
+                                            // Process data for the chart using client-side recentTrendsFromFeedback
                                             const trendsByMeal = {};
-                                            const dates = [...new Set(feedbackStats.recentTrends.map(t => t._id.date))].sort();
+                                            const dates = [...new Set(recentTrendsFromFeedback.map(t => t._id.date))].sort();
 
                                             // Initialize meal types
-                                            feedbackStats.recentTrends.forEach(trend => {
+                                            recentTrendsFromFeedback.forEach(trend => {
                                                 if (!trendsByMeal[trend._id.mealType]) {
                                                     trendsByMeal[trend._id.mealType] = {
                                                         label: trend._id.mealType.charAt(0).toUpperCase() + trend._id.mealType.slice(1),
@@ -785,7 +871,7 @@ const Food = () => {
                                             // Fill in data for each date
                                             dates.forEach(date => {
                                                 Object.keys(trendsByMeal).forEach(mealType => {
-                                                    const trend = feedbackStats.recentTrends.find(t =>
+                                                    const trend = recentTrendsFromFeedback.find(t =>
                                                         t._id.date === date && t._id.mealType === mealType
                                                     );
 
@@ -835,28 +921,37 @@ const Food = () => {
                                             );
                                         })()}
 
-                                        {/* Table with detailed data */}
+                                        {/* Table with detailed data — 7 rows, one per date */}
                                         <div className="table-responsive mt-4">
                                             <table className="table table-sm table-hover">
                                                 <thead>
                                                     <tr>
                                                         <th>Date</th>
-                                                        <th>Meal Type</th>
-                                                        <th>Avg. Rating</th>
+                                                        <th>Breakfast</th>
+                                                        <th>Lunch</th>
+                                                        <th>Snacks</th>
+                                                        <th>Dinner</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    {feedbackStats.recentTrends.map((trend, index) => (
-                                                        <tr key={index}>
-                                                            <td>{new Date(trend._id.date).toLocaleDateString()}</td>
-                                                            <td className="text-capitalize">{trend._id.mealType}</td>
-                                                            <td>
-                                                                <span className={`badge bg-${getRatingColor(trend.averageRating)}`}>
-                                                                    {trend.averageRating.toFixed(1)}
-                                                                </span>
-                                                                {' '}
-                                                                {renderStars(trend.averageRating)}
-                                                            </td>
+                                                    {recentDates.slice().reverse().map((date) => (
+                                                        <tr key={date}>
+                                                            <td>{new Date(date).toLocaleDateString()}</td>
+                                                            {mealTypes.map(mt => (
+                                                                <td key={mt} className="text-capitalize">
+                                                                    {recentByDate[date] && recentByDate[date][mt] !== null ? (
+                                                                        <>
+                                                                            <span className={`badge bg-${getRatingColor(recentByDate[date][mt])}`}>
+                                                                                {recentByDate[date][mt].toFixed(1)}
+                                                                            </span>
+                                                                            {' '}
+                                                                            {renderStars(recentByDate[date][mt])}
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-muted">No data</span>
+                                                                    )}
+                                                                </td>
+                                                            ))}
                                                         </tr>
                                                     ))}
                                                 </tbody>

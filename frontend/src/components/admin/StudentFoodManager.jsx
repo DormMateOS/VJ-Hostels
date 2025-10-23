@@ -5,7 +5,7 @@ import { useAdmin } from '../../context/AdminContext';
 const StudentFoodManager = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [stats, setStats] = useState({ totalMealsToday: 0, tiffinPaused: 0, lunchPaused: 0, snacksPaused: 0, dinnerPaused: 0 });
+    const [stats, setStats] = useState({ totalMealsToday: 0, breakfastPaused: 0, lunchPaused: 0, snacksPaused: 0, dinnerPaused: 0 });
     const { token } = useAdmin();
 
     useEffect(() => {
@@ -63,7 +63,7 @@ const StudentFoodManager = () => {
                 <div className="col-md-4">
                     <div className="card bg-primary text-white h-100">
                         <div className="card-body">
-                            <h6 className="card-title">Today's Total Meals</h6>
+                            <h6 className="card-title">Today's strength</h6>
                             <h3 className="mb-0">{stats.totalMealsToday}</h3>
                         </div>
                     </div>
@@ -73,8 +73,8 @@ const StudentFoodManager = () => {
                         <div className="col-6 col-md-3">
                             <div className="card bg-warning text-dark h-100">
                                 <div className="card-body">
-                                    <h6 className="card-title">Tiffin Paused</h6>
-                                    <h3 className="mb-0">{stats.tiffinPaused}</h3>
+                                    <h6 className="card-title">breakfast Paused</h6>
+                                    <h3 className="mb-0">{stats.breakfastPaused}</h3>
                                 </div>
                             </div>
                         </div>
