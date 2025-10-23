@@ -12,7 +12,7 @@ import GoogleOAuthButton from "./GoogleOAuthButton";
 const LoginPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { isLoading, error } = useAuthStore();
+  const { isLoading, error, checkAuth, forceResetAuthState } = useAuthStore();
 
   const [theme, setTheme] = useState("dark");
   const [selectedRole, setSelectedRole] = useState("");
@@ -38,20 +38,29 @@ const LoginPage = () => {
     const authStatus = searchParams.get("auth");
     const token = searchParams.get("token");
     const role = searchParams.get("role");
-
-    if (authStatus === "success" && token) {
-      if (role === "security") localStorage.setItem("guard_token", token);
-      else localStorage.setItem("token", token);
-
-      if (role === "security") navigate("/security", { replace: true });
-      else if (role === "student") navigate("/student", { replace: true });
-      else if (role === "admin") navigate("/admin", { replace: true });
-
-      toast.success("Successfully logged in with Google!");
-    } else if (searchParams.get("error")) {
+if (authStatus === "success" && token && role) {
+  // Store tokens FIRST
+  localStorage.setItem("token", token);
+  localStorage.setItem("auth-token", token);
+  
+  if (role === "security") {
+    localStorage.setItem("guard_token", token);
+  }
+  
+  forceResetAuthState();
+  toast.success("Successfully logged in with Google!");
+  
+  // Force a reload after navigation
+  setTimeout(() => {
+    const path = role === "security" ? "/security" : 
+                 role === "student" ? "/student" : "/admin";
+    navigate(path, { replace: true });
+    window.location.reload();
+  }, 100);
+}else if (searchParams.get("error")) {
       toast.error("Authentication failed. Please try again.");
     }
-  }, [searchParams, navigate]);
+  }, [searchParams, navigate, forceResetAuthState]);
 
   return (
     <div
