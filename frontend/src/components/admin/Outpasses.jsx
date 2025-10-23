@@ -123,9 +123,9 @@ const Outpasses = () => {
                                                 <div className="d-flex gap-2">
                                                     <button
                                                         className="btn btn-sm btn-success"
-                                                        onClick={() => handleUpdateStatus(outpass._id, 'accepted')}
+                                                        onClick={() => handleUpdateStatus(outpass._id, 'approved')}
                                                     >
-                                                        Accept
+                                                        Approve
                                                     </button>
                                                     <button
                                                         className="btn btn-sm btn-danger"

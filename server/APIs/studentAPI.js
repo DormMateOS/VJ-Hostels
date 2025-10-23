@@ -238,7 +238,7 @@ studentApp.post('/apply-outpass', expressAsyncHandler(async (req, res) => {
             rollNumber,
             month: currentMonth,
             year: currentYear,
-            status: 'accepted'
+            status: 'approved'
         });
 
         if (acceptedOutpassCount >= 6) {

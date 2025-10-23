@@ -34,14 +34,7 @@ function Navbar({ onNavigate, isDesktop = false }) {
                         onClick={handleNavClick}
                         isDesktop={true}
                     />
-                    <NavItem
-                        icon={<Users size={18} />}
-                        label="Community"
-                        to="community"
-                        isActive={location.pathname.includes('/home/community')}
-                        onClick={handleNavClick}
-                        isDesktop={true}
-                    />
+
                     <NavItem
                         icon={<MessageSquare size={18} />}
                         label="Complaints"
@@ -112,13 +105,6 @@ function Navbar({ onNavigate, isDesktop = false }) {
                     label="Announcements"
                     to="announcements"
                     isActive={location.pathname.includes('/home/announcements')}
-                    onClick={handleNavClick}
-                />
-                <NavItem
-                    icon={<Users size={20} />}
-                    label="Community"
-                    to="community"
-                    isActive={location.pathname.includes('/home/community')}
                     onClick={handleNavClick}
                 />
                 <NavItem

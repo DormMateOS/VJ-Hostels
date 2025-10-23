@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Megaphone, CalendarDays, ArrowRight } from 'lucide-react';
-// import TodayAnnouncements from './TodayAnnouncements';
-// import AllAnnouncements from './AllAnnouncements';
+import { Megaphone, CalendarDays, ArrowRight, CheckCircle } from 'lucide-react';
 import Outpass from './Outpass';
 import OutpassList from './OutpassList';
+import CurrentPasses from './CurrentPasses';
 
 const OutpassPage = () => {
     const [activeTab, setActiveTab] = useState('outpass'); // Default to outpass application
@@ -27,6 +26,13 @@ const OutpassPage = () => {
                     <span>Apply For OutPass</span>
                 </div>
                 <div
+                    className={`outpass-tab ${activeTab === 'currentPasses' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('currentPasses')}
+                >
+                    <CheckCircle size={20} />
+                    <span>Current Passes</span>
+                </div>
+                <div
                     className={`outpass-tab ${activeTab === 'outpassList' ? 'active' : ''}`}
                     onClick={() => setActiveTab('outpassList')}
                 >
@@ -37,7 +43,9 @@ const OutpassPage = () => {
 
             {/* Content based on active tab */}
             <div className="outpass-content">
-                {activeTab === 'outpass' ? <Outpass/> : <OutpassList />}
+                {activeTab === 'outpass' && <Outpass/>}
+                {activeTab === 'currentPasses' && <CurrentPasses />}
+                {activeTab === 'outpassList' && <OutpassList />}
             </div>
         </div>
     );

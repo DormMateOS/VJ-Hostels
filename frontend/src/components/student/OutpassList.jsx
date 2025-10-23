@@ -26,7 +26,13 @@ const OutpassList = () => {
                     throw new Error('User roll number is required');
                 }
                 const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/student-api/all-outpasses/${user.rollNumber}`);
-                setOutpasses(Array.isArray(response.data.studentOutpasses) ? response.data.studentOutpasses : []);
+                
+                // Filter for returned and rejected passes only (history)
+                const historyPasses = response.data.studentOutpasses?.filter(
+                    pass => pass.status === 'returned' || pass.status === 'rejected' || pass.status === 'pending'
+                ) || [];
+                
+                setOutpasses(historyPasses);
             } catch (err) {
                 console.error('Error fetching outpasses:', err);
                 setError(err.response?.data?.message || err.message || 'Failed to fetch outpasses');
@@ -139,8 +145,10 @@ const OutpassList = () => {
 const getStatusColor = (status) => {
     switch (status) {
         case 'pending': return '#FFA500';
-        case 'accepted': return '#4CAF50';
+        case 'approved': return '#4CAF50';
         case 'rejected': return '#FF0000';
+        case 'out': return '#2196F3';
+        case 'returned': return '#9C27B0';
         default: return '#000';
     }
 };

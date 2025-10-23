@@ -220,12 +220,12 @@ if (authStatus === "success" && token && role) {
           />
         </div>
 
-        <p
+        {/* <p
           className="mt-3"
           style={{ fontSize: "0.85rem", color: themeStyles.subText }}
         >
           Secure Google Authentication
-        </p>
+        </p> */}
       </motion.div>
     </div>
   );
