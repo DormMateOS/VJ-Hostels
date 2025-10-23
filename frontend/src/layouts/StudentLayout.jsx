@@ -17,23 +17,22 @@ function StudentLayout() {
 
   // Check if current page is announcements page
   const isAnnouncementsPage = location.pathname.includes('/announcements')
-
-  const handleLogout = async () => {
-    try {
-      // Call auth store logout first to clear tokens and reset auth state
-      await logout()
-      
-      // Clear user data
-      clearUser()
-      
-      // Navigate to login page - will be instant since authCheckCompleted is now true
-      navigate('/login', { replace: true })
-    } catch (error) {
-      console.error('Logout error:', error)
-      // Even if there's an error, navigate to login
-      navigate('/login', { replace: true })
-    }
+const handleLogout = async () => {
+  try {
+    // Call auth store logout first to clear tokens and reset auth state
+    await logout()
+    
+    // Clear user data
+    clearUser()
+    
+    // Force a full page reload to login page
+    window.location.href = '/login'
+  } catch (error) {
+    console.error('Logout error:', error)
+    // Even if there's an error, navigate to login with reload
+    window.location.href = '/login'
   }
+}
 
   useEffect(() => {
     const checkMobile = () => {

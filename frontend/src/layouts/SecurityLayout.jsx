@@ -12,19 +12,19 @@ const SecurityLayout = () => {
     return location.pathname === `/security${path}`;
   };
 
-  const handleLogout = async () => {
-    try {
-      // Call auth store logout to clear tokens and reset auth state
-      await logout();
-      
-      // Navigate to login page
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Even if there's an error, navigate to login
-      navigate('/login', { replace: true });
-    }
-  };
+const handleLogout = async () => {
+  try {
+    // Call auth store logout to clear tokens and reset auth state
+    await logout();
+    
+    // Force a full page reload to login page
+    window.location.href = '/login';
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Even if there's an error, navigate to login with reload
+    window.location.href = '/login';
+  }
+};
 
   return (
     <div className="security-layout">
