@@ -2,13 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
 import { QrCode, CheckCircle, XCircle, AlertCircle, User, Phone, Calendar, Clock } from 'lucide-react';
+import '../../styles/qr-scanner.css';
 
 const QRScanner = () => {
     const [scanResult, setScanResult] = useState(null);
     const [scanning, setScanning] = useState(false);
     const [error, setError] = useState(null);
     const [verifiedPass, setVerifiedPass] = useState(null);
-    const [actionType, setActionType] = useState('out'); // 'out' or 'in'
+    const [detectedAction, setDetectedAction] = useState(null); // Auto-detected: 'out' or 'in'
     const html5QrCodeRef = useRef(null);
     const scannerRef = useRef(null);
 
@@ -47,7 +48,8 @@ const QRScanner = () => {
                 { facingMode: "environment" },
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 }
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
                 },
                 handleScan,
                 (errorMessage) => {
@@ -79,8 +81,18 @@ const QRScanner = () => {
                 );
 
                 if (verifyResponse.data.valid) {
-                    setVerifiedPass(verifyResponse.data.outpass);
+                    const pass = verifyResponse.data.outpass;
+                    setVerifiedPass(pass);
                     setScanResult(decodedText);
+                    
+                    // Auto-detect action based on pass status
+                    if (pass.status === 'approved') {
+                        setDetectedAction('out');
+                    } else if (pass.status === 'out') {
+                        setDetectedAction('in');
+                    } else {
+                        setDetectedAction(null);
+                    }
                 }
             } catch (err) {
                 console.error('Error verifying QR code:', err);
@@ -93,38 +105,26 @@ const QRScanner = () => {
         }
     };
 
-    const handleCheckOut = async () => {
+    const handleAction = async () => {
+        if (!detectedAction) return;
+        
         try {
+            const endpoint = detectedAction === 'out' ? '/scan/out' : '/scan/in';
             const response = await axios.post(
-                `${import.meta.env.VITE_SERVER_URL}/outpass-api/scan/out`,
+                `${import.meta.env.VITE_SERVER_URL}/outpass-api${endpoint}`,
                 { qrCodeData: scanResult }
             );
 
-            alert(`✅ ${response.data.message}\n\nStudent: ${response.data.student.name}\nTime: ${new Date(response.data.student.outTime).toLocaleString()}`);
+            const action = detectedAction === 'out' ? 'checked out' : 'checked in';
+            const time = detectedAction === 'out' ? response.data.student.outTime : response.data.student.inTime;
+            
+            alert(`✅ ${response.data.message}\n\nStudent: ${response.data.student.name}\nTime: ${new Date(time).toLocaleString()}`);
             
             // Reset for next scan
             resetScanner();
         } catch (err) {
-            console.error('Error during checkout:', err);
-            alert(err.response?.data?.message || 'Failed to check out student');
-            resetScanner();
-        }
-    };
-
-    const handleCheckIn = async () => {
-        try {
-            const response = await axios.post(
-                `${import.meta.env.VITE_SERVER_URL}/outpass-api/scan/in`,
-                { qrCodeData: scanResult }
-            );
-
-            alert(`✅ ${response.data.message}\n\nStudent: ${response.data.student.name}\nTime: ${new Date(response.data.student.inTime).toLocaleString()}`);
-            
-            // Reset for next scan
-            resetScanner();
-        } catch (err) {
-            console.error('Error during checkin:', err);
-            alert(err.response?.data?.message || 'Failed to check in student');
+            console.error(`Error during ${detectedAction}:`, err);
+            alert(err.response?.data?.message || `Failed to ${detectedAction === 'out' ? 'check out' : 'check in'} student`);
             resetScanner();
         }
     };
@@ -132,6 +132,7 @@ const QRScanner = () => {
     const resetScanner = () => {
         setScanResult(null);
         setVerifiedPass(null);
+        setDetectedAction(null);
         setError(null);
         startScanning();
     };
@@ -141,52 +142,25 @@ const QRScanner = () => {
             <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
                 <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
                     <QrCode size={32} style={{ verticalAlign: 'middle', marginRight: '10px' }} />
-                    QR Code Scanner
+                    Smart QR Scanner
                 </h1>
                 <p style={{ color: '#666', fontSize: '1rem' }}>
-                    Scan student outpass QR codes for check-in/check-out
+                    Scan any outpass QR code - system automatically detects check-in or check-out
                 </p>
-            </div>
-
-            {/* Action Type Selector */}
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                gap: '1rem', 
-                marginBottom: '2rem' 
-            }}>
-                <button
-                    onClick={() => setActionType('out')}
-                    style={{
-                        padding: '12px 24px',
-                        borderRadius: '8px',
-                        border: '2px solid',
-                        borderColor: actionType === 'out' ? '#4CAF50' : '#ddd',
-                        backgroundColor: actionType === 'out' ? '#4CAF50' : '#fff',
-                        color: actionType === 'out' ? '#fff' : '#333',
+                {detectedAction && (
+                    <div style={{
+                        marginTop: '1rem',
+                        padding: '8px 16px',
+                        backgroundColor: detectedAction === 'out' ? '#e8f5e9' : '#e3f2fd',
+                        color: detectedAction === 'out' ? '#2e7d32' : '#1565c0',
+                        borderRadius: '20px',
+                        display: 'inline-block',
                         fontWeight: 'bold',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    Check Out (Leaving)
-                </button>
-                <button
-                    onClick={() => setActionType('in')}
-                    style={{
-                        padding: '12px 24px',
-                        borderRadius: '8px',
-                        border: '2px solid',
-                        borderColor: actionType === 'in' ? '#2196F3' : '#ddd',
-                        backgroundColor: actionType === 'in' ? '#2196F3' : '#fff',
-                        color: actionType === 'in' ? '#fff' : '#333',
-                        fontWeight: 'bold',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }}
-                >
-                    Check In (Returning)
-                </button>
+                        fontSize: '0.9rem'
+                    }}>
+                        🎯 Detected: {detectedAction === 'out' ? 'Check-Out (Student Leaving)' : 'Check-In (Student Returning)'}
+                    </div>
+                )}
             </div>
 
             <div style={{ 
@@ -214,7 +188,9 @@ const QRScanner = () => {
                             borderRadius: '12px', 
                             overflow: 'hidden',
                             width: '100%',
-                            minHeight: '300px'
+                            maxWidth: '500px',
+                            margin: '0 auto',
+                            position: 'relative'
                         }}
                     >
                     </div>
@@ -392,69 +368,64 @@ const QRScanner = () => {
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                {actionType === 'out' && verifiedPass.status === 'approved' && (
+                            {/* Action Button */}
+                            <div style={{ marginTop: '1.5rem' }}>
+                                {detectedAction ? (
                                     <button
-                                        onClick={handleCheckOut}
+                                        onClick={handleAction}
                                         style={{
-                                            flex: 1,
-                                            padding: '14px',
-                                            backgroundColor: '#4CAF50',
+                                            width: '100%',
+                                            padding: '16px',
+                                            backgroundColor: detectedAction === 'out' ? '#4CAF50' : '#2196F3',
                                             color: '#fff',
                                             border: 'none',
                                             borderRadius: '8px',
                                             fontWeight: 'bold',
-                                            fontSize: '1rem',
+                                            fontSize: '1.1rem',
                                             cursor: 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            gap: '8px'
+                                            gap: '10px',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.target.style.transform = 'scale(1.02)';
+                                            e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.target.style.transform = 'scale(1)';
+                                            e.target.style.boxShadow = 'none';
                                         }}
                                     >
-                                        <CheckCircle size={20} />
-                                        Approve Exit
+                                        <CheckCircle size={24} />
+                                        {detectedAction === 'out' ? '✓ Confirm Exit (Check Out)' : '✓ Confirm Entry (Check In)'}
                                     </button>
-                                )}
-
-                                {actionType === 'in' && verifiedPass.status === 'out' && (
-                                    <button
-                                        onClick={handleCheckIn}
-                                        style={{
-                                            flex: 1,
-                                            padding: '14px',
-                                            backgroundColor: '#2196F3',
-                                            color: '#fff',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            fontWeight: 'bold',
-                                            fontSize: '1rem',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '8px'
-                                        }}
-                                    >
-                                        <CheckCircle size={20} />
-                                        Approve Entry
-                                    </button>
-                                )}
-
-                                {((actionType === 'out' && verifiedPass.status !== 'approved') ||
-                                  (actionType === 'in' && verifiedPass.status !== 'out')) && (
+                                ) : (
                                     <div style={{
-                                        flex: 1,
-                                        padding: '14px',
+                                        width: '100%',
+                                        padding: '16px',
                                         backgroundColor: '#ffebee',
                                         color: '#d32f2f',
                                         borderRadius: '8px',
                                         textAlign: 'center',
-                                        fontWeight: 'bold'
+                                        fontWeight: 'bold',
+                                        fontSize: '1rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px'
                                     }}>
-                                        <XCircle size={20} style={{ verticalAlign: 'middle', marginRight: '8px' }} />
-                                        Invalid Status for {actionType === 'out' ? 'Exit' : 'Entry'}
+                                        <XCircle size={24} />
+                                        <div>
+                                            <div>Invalid Pass Status</div>
+                                            <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.9 }}>
+                                                Current status: <strong>{verifiedPass.status}</strong><br/>
+                                                {verifiedPass.status === 'pending' && 'Pass is not yet approved by admin'}
+                                                {verifiedPass.status === 'rejected' && 'Pass has been rejected'}
+                                                {verifiedAction === 'returned' && 'Student has already returned'}
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
                             </div>

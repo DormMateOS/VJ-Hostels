@@ -1,0 +1,54 @@
+/* QR Scanner Styles - Fix for split camera view */
+
+#qr-reader {
+    position: relative !important;
+    width: 100% !important;
+}
+
+#qr-reader video {
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+}
+
+#qr-reader__dashboard {
+    display: none !important;
+}
+
+#qr-reader__dashboard_section {
+    display: none !important;
+}
+
+#qr-reader__camera_selection {
+    display: none !important;
+}
+
+#qr-reader__scan_region {
+    position: relative !important;
+    width: 100% !important;
+}
+
+#qr-reader__scan_region img {
+    display: none !important;
+}
+
+/* Remove duplicate video elements */
+#qr-reader > div {
+    width: 100% !important;
+}
+
+#qr-reader > div > div {
+    width: 100% !important;
+}
+
+/* Ensure single video stream */
+#qr-reader video:not(:first-of-type) {
+    display: none !important;
+}
+
+/* QR box styling */
+#qr-shaded-region {
+    border-width: 50px !important;
+}
