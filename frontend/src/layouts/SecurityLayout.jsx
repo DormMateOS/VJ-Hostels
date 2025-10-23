@@ -33,7 +33,7 @@ const handleLogout = async () => {
         <div className="security-header-container">
           <div className="header-content">
             {/* Logo Section */}
-            <div className="logo-section">
+            <div className="logo-section" onClick={() => window.location.href = '/'} style={{ cursor: 'pointer' }}>
               <div className="logo-box">
                 <span>🛡️</span>
               </div>
@@ -45,12 +45,6 @@ const handleLogout = async () => {
 
             {/* Navigation */}
             <nav className="nav-section">
-              <Link 
-                to="/security/home" 
-                className={`nav-link ${isActive('/home') ? 'active' : ''}`}
-              >
-                Home
-              </Link>
               <Link 
                 to="/security/scanner" 
                 className={`nav-link ${isActive('/scanner') ? 'active' : ''}`}
