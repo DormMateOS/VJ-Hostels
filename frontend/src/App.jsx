@@ -6,6 +6,8 @@ import LoginPage from './auth/LoginPage';
 import StudentPage from './pages/StudentPage';
 import AdminPage from './pages/AdminPage';
 import SecurityPage from './pages/SecurityPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 import { AdminProvider } from './context/AdminContext';
 
 function App() {
@@ -26,16 +28,46 @@ function App() {
         
         <Routes>
           {/* Default route - redirect to login */}
-          <Route path="/" element={<LoginPage />} />
+          <Route path="/" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
           
           {/* Login route */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
           
-          {/* Role-based routes */}
-          <Route path="/student/*" element={<StudentPage />} />
-          {/* add trailing /* so nested routes inside AdminPage render correctly */}
-          <Route path="/admin/*" element={<AdminPage />} />
-          <Route path="/security/*" element={<SecurityPage />} />
+          {/* Role-based protected routes */}
+          <Route 
+            path="/student/*" 
+            element={
+              <ProtectedRoute allowedRoles="student">
+                <StudentPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/admin/*" 
+            element={
+              <ProtectedRoute allowedRoles="admin">
+                <AdminPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/security/*" 
+            element={
+              <ProtectedRoute allowedRoles={['security', 'guard']}>
+                <SecurityPage />
+              </ProtectedRoute>
+            } 
+          />
           
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />

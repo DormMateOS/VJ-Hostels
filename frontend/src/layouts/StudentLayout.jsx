@@ -4,21 +4,35 @@ import { Menu, X } from 'lucide-react'
 import Navbar from '../components/student/Navbar'
 import AnnouncementBanner from '../components/student/AnnouncementBanner'
 import useCurrentUser from '../hooks/student/useCurrentUser'
+import { useAuthStore } from '../store/authStore'
 import '../styles/student/custom.css'
 
 function StudentLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const { clearUser } = useCurrentUser()
+  const { logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   // Check if current page is announcements page
   const isAnnouncementsPage = location.pathname.includes('/announcements')
 
-  const handleLogout = () => {
-    clearUser()
-    navigate('/login')
+  const handleLogout = async () => {
+    try {
+      // Call auth store logout first to clear tokens and reset auth state
+      await logout()
+      
+      // Clear user data
+      clearUser()
+      
+      // Navigate to login page - will be instant since authCheckCompleted is now true
+      navigate('/login', { replace: true })
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Even if there's an error, navigate to login
+      navigate('/login', { replace: true })
+    }
   }
 
   useEffect(() => {

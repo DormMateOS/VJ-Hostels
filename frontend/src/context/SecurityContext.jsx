@@ -103,7 +103,12 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear all possible token variations from localStorage
     localStorage.removeItem('guard_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth-token');
+    localStorage.removeItem('admin');
+    localStorage.removeItem('adminToken');
     setUser(null);
     setError(null);
     setIsAuthenticated(false);
