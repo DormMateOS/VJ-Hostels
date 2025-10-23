@@ -230,6 +230,33 @@ studentApp.post('/apply-outpass', expressAsyncHandler(async (req, res) => {
             });
         }
 
+        // Check if the user has any active pass (approved or out)
+        const activePass = await Outpass.findOne({
+            rollNumber,
+            status: { $in: ['approved', 'out'] }
+        });
+
+        if (activePass) {
+            return res.status(400).json({ 
+                message: "You already have an active pass. Please complete or return your current pass before requesting a new one.",
+                activePassType: activePass.type,
+                activePassStatus: activePass.status
+            });
+        }
+
+        // Check if the user has any pending pass
+        const pendingPass = await Outpass.findOne({
+            rollNumber,
+            status: 'pending'
+        });
+
+        if (pendingPass) {
+            return res.status(400).json({ 
+                message: "You already have a pending pass request. Please wait for admin approval or contact admin.",
+                pendingPassType: pendingPass.type
+            });
+        }
+
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth() + 1;
         const currentYear = currentDate.getFullYear();
