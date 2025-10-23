@@ -153,7 +153,9 @@ const Food = () => {
             const feedbackData = {
                 mealType,
                 rating: parseInt(rating),
-                feedback
+                feedback,
+                // include student id (prefer _id, fallback to id or rollNumber)
+                studentId: user && (user._id || user.id)
             };
             await axios.post(`${import.meta.env.VITE_SERVER_URL}/food-api/student/feedback`, feedbackData);
             setSubmitSuccess(true);
