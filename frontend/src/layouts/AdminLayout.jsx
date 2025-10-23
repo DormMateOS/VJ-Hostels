@@ -8,10 +8,10 @@ const AdminLayout = () => {
   const { admin, logout } = useAdmin();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+const handleLogout = () => {
+  logout();
+  window.location.href = '/login';
+};
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
