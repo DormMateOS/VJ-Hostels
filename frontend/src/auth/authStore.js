@@ -11,7 +11,8 @@ axios.defaults.withCredentials = true;
 // Add request interceptor to include auth token
 axios.interceptors.request.use(
 	(config) => {
-		const token = localStorage.getItem('auth-token');
+		// Try to get token from either storage key
+		const token = localStorage.getItem('auth-token') || localStorage.getItem('token');
 		if (token) {
 			config.headers.Authorization = `Bearer ${token}`;
 		}
@@ -27,8 +28,10 @@ axios.interceptors.response.use(
 	(response) => response,
 	async (error) => {
 		if (error.response?.status === 401) {
-			// Clear invalid token
+			// Clear invalid tokens
 			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
+			localStorage.removeItem('guard_token');
 			delete axios.defaults.headers.common['Authorization'];
 		}
 		return Promise.reject(error);
@@ -41,6 +44,8 @@ export const useAuthStore = create((set, get) => ({
 	error: null,
 	isLoading: false,
 	isCheckingAuth: false,
+	authCheckCompleted: false, // Flag to track if initial auth check is done
+	lastAuthCheckTime: null, // Timestamp of last auth check
 	message: null,
 	getRoleBasedRoute: () => {
 		const { user } = get();
@@ -121,8 +126,10 @@ export const useAuthStore = create((set, get) => ({
 		try {
 			await axios.post(`${API_URL}/logout`);
 			
-			// Clear local storage
+			// Clear all token variations from local storage
 			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
+			localStorage.removeItem('guard_token');
 			delete axios.defaults.headers.common['Authorization'];
 			
 			set({
@@ -130,12 +137,15 @@ export const useAuthStore = create((set, get) => ({
 				isAuthenticated: false,
 				error: null,
 				isLoading: false,
+				authCheckCompleted: true, // Mark as completed to prevent re-checking
 			});
 			
 			handleSuccess("Logged out successfully");
 		} catch (error) {
 			// Even if logout fails on server, clear local state
 			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
+			localStorage.removeItem('guard_token');
 			delete axios.defaults.headers.common['Authorization'];
 			
 			set({
@@ -143,6 +153,7 @@ export const useAuthStore = create((set, get) => ({
 				isAuthenticated: false,
 				error: null,
 				isLoading: false,
+				authCheckCompleted: true, // Mark as completed to prevent re-checking
 			});
 		}
 	},
@@ -152,39 +163,76 @@ export const useAuthStore = create((set, get) => ({
 		console.log('🔄 Force resetting auth state...');
 		set({
 			_isCheckingAuthInProgress: false,
-			isCheckingAuth: false
+			isCheckingAuth: false,
+			authCheckCompleted: false,
+			lastAuthCheckTime: null,
 		});
 	},
 
 	checkAuth: async () => {
-		// Access flags but suppress unused warning (used for debugging logs and future guards)
-		// eslint-disable-next-line no-unused-vars
-		const { _isCheckingAuthInProgress, isCheckingAuth } = get();
+		const state = get();
+		const { _isCheckingAuthInProgress, isCheckingAuth, lastAuthCheckTime, authCheckCompleted } = state;
 
-		// Prevent multiple simultaneous auth checks - TEMPORARILY DISABLED FOR DEBUGGING
-		// if (_isCheckingAuthInProgress || isCheckingAuth) {
-		//	console.log('🚫 Auth check already in progress, skipping...');
-		//	return;
-		// }
+		// If auth check was already completed successfully, don't check again
+		if (authCheckCompleted && state.isAuthenticated) {
+			console.log('✅ Already authenticated, skipping auth check');
+			return;
+		}
+
+		// Prevent multiple simultaneous auth checks
+		if (_isCheckingAuthInProgress || isCheckingAuth) {
+			console.log('🚫 Auth check already in progress, skipping...');
+			return;
+		}
+
+		// Rate limiting: Don't check auth more than once every 5 seconds
+		const MIN_CHECK_INTERVAL = 5000; // 5 seconds
+		if (lastAuthCheckTime && Date.now() - lastAuthCheckTime < MIN_CHECK_INTERVAL) {
+			console.log('⏱️ Auth check rate limited, skipping...');
+			return;
+		}
+
+		// If no token exists, mark as completed and don't make the request
+		const token = localStorage.getItem('auth-token') || localStorage.getItem('token');
+		if (!token) {
+			console.log('🔓 No auth token found, skipping auth check');
+			set({
+				user: null,
+				isAuthenticated: false,
+				isCheckingAuth: false,
+				authCheckCompleted: true,
+				lastAuthCheckTime: Date.now(),
+				_isCheckingAuthInProgress: false,
+			});
+			return;
+		}
 
 		console.log('🔄 Starting auth check...');
-		set({ isCheckingAuth: true, error: null, _isCheckingAuthInProgress: true });
+		set({ 
+			isCheckingAuth: true, 
+			error: null, 
+			_isCheckingAuthInProgress: true,
+			lastAuthCheckTime: Date.now(),
+		});
 
 		// Safety timeout to reset flag in case something goes wrong
 		const timeoutId = setTimeout(() => {
 			console.log('⏰ Auth check timeout, resetting flag...');
-			set({ _isCheckingAuthInProgress: false, isCheckingAuth: false });
-		}, 5000); // 5 second timeout
+			set({ 
+				_isCheckingAuthInProgress: false, 
+				isCheckingAuth: false,
+				authCheckCompleted: true, // Mark as completed even on timeout
+			});
+		}, 10000); // 10 second timeout (increased from 5)
 
 		try {
 			console.log('=== FRONTEND CHECK AUTH ===');
 			console.log('Making request to:', `${API_URL}/check-auth`);
 			console.log('Axios withCredentials:', axios.defaults.withCredentials);
 			console.log('Authorization header:', axios.defaults.headers.common['Authorization'] ? 'Set' : 'Not set');
-			console.log('LocalStorage token:', localStorage.getItem('auth-token') ? 'Present' : 'Missing');
+			console.log('LocalStorage token:', token ? 'Present' : 'Missing');
 
 			// Ensure Authorization header is set if we have a token
-			const token = localStorage.getItem('auth-token');
 			if (token && !axios.defaults.headers.common['Authorization']) {
 				axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 				console.log('🔑 Authorization header set from localStorage');
@@ -192,7 +240,7 @@ export const useAuthStore = create((set, get) => ({
 
 			const response = await axios.get(`${API_URL}/check-auth`);
 
-			console.log('Check auth successful:', response.data);
+			console.log('✅ Check auth successful:', response.data);
 			console.log('===========================');
 
 			clearTimeout(timeoutId);
@@ -201,7 +249,8 @@ export const useAuthStore = create((set, get) => ({
 				isAuthenticated: true,
 				isCheckingAuth: false,
 				error: null,
-				_isCheckingAuthInProgress: false
+				authCheckCompleted: true,
+				_isCheckingAuthInProgress: false,
 			});
 		} catch (error) {
 			console.log('=== CHECK AUTH FAILED ===');
@@ -209,8 +258,10 @@ export const useAuthStore = create((set, get) => ({
 			console.log('Status:', error.response?.status);
 			console.log('=========================');
 
-			// Clear invalid token
+			// Clear all invalid tokens
 			localStorage.removeItem('auth-token');
+			localStorage.removeItem('token');
+			localStorage.removeItem('guard_token');
 			delete axios.defaults.headers.common['Authorization'];
 
 			clearTimeout(timeoutId);
@@ -220,7 +271,8 @@ export const useAuthStore = create((set, get) => ({
 				isAuthenticated: false,
 				isCheckingAuth: false,
 				error: null,
-				_isCheckingAuthInProgress: false
+				authCheckCompleted: true, // Mark as completed to prevent retry loop
+				_isCheckingAuthInProgress: false,
 			});
 		}
 	},

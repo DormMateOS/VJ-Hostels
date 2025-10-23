@@ -22,8 +22,12 @@ export const AdminProvider = ({ children }) => {
     const logout = () => {
         setAdmin(null);
         setToken(null);
+        // Clear all possible token variations from localStorage
         localStorage.removeItem('admin');
         localStorage.removeItem('adminToken');
+        localStorage.removeItem('token');
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('guard_token');
     };
 
     const isAuthenticated = () => {

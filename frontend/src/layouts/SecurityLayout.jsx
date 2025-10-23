@@ -1,12 +1,29 @@
 import React from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 import '../styles/security/custom.css';
 
 const SecurityLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuthStore();
   
   const isActive = (path) => {
     return location.pathname === `/security${path}`;
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Call auth store logout to clear tokens and reset auth state
+      await logout();
+      
+      // Navigate to login page
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Even if there's an error, navigate to login
+      navigate('/login', { replace: true });
+    }
   };
 
   return (
@@ -54,7 +71,7 @@ const SecurityLayout = () => {
                 <p className="user-name">Security Guard</p>
                 <p className="user-status">Online</p>
               </div>
-              <button className="logout-btn">
+              <button className="logout-btn" onClick={handleLogout}>
                 Logout
               </button>
             </div>
