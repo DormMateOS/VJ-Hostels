@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { otpAPI, studentAPI, overrideAPI } from '../../securityServices/api';
 import socketService from '../../securityServices/socket';
 import { useAuth } from '../../context/SecurityContext';
-import './Guard.css';
+import './VisitorManagement.css';
 
 const Guard = () => {
   const { user, logout } = useAuth();
