@@ -15,7 +15,16 @@ const outpassSchema = new mongoose.Schema({
     parentMobileNumber: { type: String, required: true },
     month: { type: Number, required: true },
     year: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' }
+    status: { 
+        type: String, 
+        enum: ['pending', 'approved', 'rejected', 'out', 'returned'], 
+        default: 'pending' 
+    },
+    qrCodeData: { type: String }, // Unique QR code identifier
+    actualOutTime: { type: Date }, // When student actually left (scanned out)
+    actualInTime: { type: Date }, // When student actually returned (scanned in)
+    approvedBy: { type: String }, // Admin who approved the outpass
+    approvedAt: { type: Date } // When the outpass was approved
 }, { timestamps: true });
 
 const Outpass = mongoose.model('Outpass', outpassSchema);

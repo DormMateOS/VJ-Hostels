@@ -403,22 +403,29 @@ adminApp.put('/update-outpass-status/:id', verifyAdmin, expressAsyncHandler(asyn
     try {
         const { id } = req.params;
         const { status } = req.body;
+        const crypto = require('crypto');
 
-        if (!['accepted', 'rejected'].includes(status)) {
-            return res.status(400).json({ message: "Invalid status. Use 'accepted' or 'rejected'." });
+        if (!['approved', 'rejected'].includes(status)) {
+            return res.status(400).json({ message: "Invalid status. Use 'approved' or 'rejected'." });
         }
 
-        const updatedOutpass = await Outpass.findByIdAndUpdate(
-            id,
-            { status },
-            { new: true }
-        );
-
-        if (!updatedOutpass) {
+        const outpass = await Outpass.findById(id);
+        if (!outpass) {
             return res.status(404).json({ message: "Outpass not found" });
         }
 
-        res.status(200).json({ message: `Outpass ${status} successfully`, outpass: updatedOutpass });
+        // Generate QR code if approved
+        if (status === 'approved') {
+            const timestamp = Date.now();
+            const randomString = crypto.randomBytes(8).toString('hex');
+            outpass.qrCodeData = `${outpass._id}-${outpass.rollNumber}-${timestamp}-${randomString}`;
+            outpass.approvedAt = new Date();
+        }
+
+        outpass.status = status;
+        await outpass.save();
+
+        res.status(200).json({ message: `Outpass ${status} successfully`, outpass });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

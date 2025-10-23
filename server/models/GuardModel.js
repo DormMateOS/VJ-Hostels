@@ -5,7 +5,17 @@ const guardSchema = new mongoose.Schema({
   googleId: {
     type: String,
     unique: true,
-    required: true  // Now required since we're using Google OAuth
+    sparse: true  // Allow null values for non-Google OAuth users
+  },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true,  // Allow null values for Google OAuth users
+    trim: true
+  },
+  password: {
+    type: String,
+    // Required only for non-Google OAuth users
   },
   email: {
     type: String,
@@ -19,20 +29,19 @@ const guardSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  // Remove username and password fields since we're using Google OAuth
   role: {
     type: String,
     default: 'security',
-    enum: ['security', 'head_security']  // Add head_security role
+    enum: ['security', 'head_security']
   },
-  phone: {
+  phoneNumber: {
     type: String,
     required: true,
     trim: true
   },
   shift: {
     type: String,
-    enum: ['morning', 'evening', 'night'],
+    enum: ['morning', 'evening', 'night', 'day'],
     required: true
   },
   isActive: {
@@ -73,6 +82,19 @@ const guardSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Remove password-related methods since we're using Google OAuth
+// Hash password before saving (only for non-Google OAuth users)
+guardSchema.pre('save', async function(next) {
+  if (!this.isModified('password') || !this.password) {
+    return next();
+  }
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model('Guard', guardSchema);
