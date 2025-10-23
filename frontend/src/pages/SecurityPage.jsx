@@ -1,7 +1,10 @@
 import React from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from '../context/SecurityContext';  // Changed import
-import Guard from '../components/security/Guard';
+import { AuthProvider, useAuth } from '../context/SecurityContext';
+import SecurityLayout from '../layouts/SecurityLayout'
+import VisitorManagement from '../components/security/VisitorManagement';
+import Home from '../components/student/HomePage'
+import Attendance from '../components/security/Attendance';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -19,18 +22,18 @@ const ProtectedRoute = ({ children }) => {
 
 function SecurityPage() {
   return (
-    <AuthProvider> 
+    <AuthProvider>
       <Routes>
-        <Route 
-          path="/" 
-          element={
-            <ProtectedRoute>
-              <Guard />
-            </ProtectedRoute>
-          } 
-        />
-        {/* Redirect all other paths to root */}
-        <Route path="*" element={<Navigate to="/security" replace />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <SecurityLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Home />} />
+          <Route path="home" element={<Home />} />
+          <Route path="visitors" element={<VisitorManagement />} />
+          <Route path="attendance" element={<Attendance/>}></Route>
+        </Route>
       </Routes>
     </AuthProvider>
   );

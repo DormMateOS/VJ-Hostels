@@ -1,21 +1,60 @@
 import React from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import '../styles/security/custom.css';
 
-const SecurityLayout = ({ children }) => {
+const SecurityLayout = () => {
+  const location = useLocation();
+  
+  const isActive = (path) => {
+    return location.pathname === `/security${path}`;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50">
+    <div className="security-layout">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <span className="text-2xl">🛡️</span>
-              <h1 className="ml-2 text-xl font-semibold text-gray-900">
-                Security Dashboard
-              </h1>
+      <header className="security-header">
+        <div className="security-header-container">
+          <div className="header-content">
+            {/* Logo Section */}
+            <div className="logo-section">
+              <div className="logo-box">
+                <span>🛡️</span>
+              </div>
+              <div className="logo-text">
+                <h1>Security Dashboard</h1>
+                <p>VNR VJIET Hostel Management</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, Security!</span>
-              <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm">
+
+            {/* Navigation */}
+            <nav className="nav-section">
+              <Link 
+                to="/security/home" 
+                className={`nav-link ${isActive('/home') ? 'active' : ''}`}
+              >
+                Home
+              </Link>
+              <Link 
+                to="/security/visitors" 
+                className={`nav-link ${isActive('/visitors') ? 'active' : ''}`}
+              >
+                Visitors
+              </Link>
+              <Link 
+                to="/security/attendance" 
+                className={`nav-link ${isActive('/attendance') ? 'active' : ''}`}
+              >
+                Attendance
+              </Link>
+            </nav>
+
+            {/* Right Section */}
+            <div className="user-section">
+              <div className="user-info">
+                <p className="user-name">Security Guard</p>
+                <p className="user-status">Online</p>
+              </div>
+              <button className="logout-btn">
                 Logout
               </button>
             </div>
@@ -24,8 +63,8 @@ const SecurityLayout = ({ children }) => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+      <main className="security-main">
+        <Outlet />
       </main>
     </div>
   );
