@@ -14,8 +14,8 @@ function SecurityPage() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<SecurityLayout />}>
-          <Route index element={<SecurityDashboard />} />
-          <Route path="home" element={<Home />} />
+          {/* <Route index element={<SecurityDashboard />} /> */}
+          <Route index element ={<Home/>} /> 
           <Route path="scanner" element={<QRScanner />} />
           <Route path="passes" element={<ActivePasses />} />
           <Route path="visitors" element={<VisitorManagement />} />
