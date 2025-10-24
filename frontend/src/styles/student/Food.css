@@ -38,6 +38,26 @@
     margin-bottom: 2rem; 
 }
 
+/* Responsive grid for the four main tabs so they remain equal-width */
+.tab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    width: 100%;
+    align-items: stretch;
+}
+
+.tab-grid-item {
+    display: flex;
+}
+
+.tab-grid-item .tab-card {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Base Card Styling - Clean, Shadowed, Larger, and Rounded */
 .tab-card {
     background: #FFFFFF; /* No internal color/fill */
@@ -192,6 +212,60 @@
     transition: all 0.3s ease, background 0.3s ease;
     margin-bottom: 1.5rem; /* Space between rows */
     z-index: 5; /* Keep meal card above the progress line */
+}
+
+.meal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    align-items: stretch;
+    grid-auto-rows: 1fr; /* ensure rows are equal height */
+}
+
+.meal-grid-item {
+    display: flex;
+}
+
+.meal-grid-item .meal-item-card {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 100%;
+    min-height: clamp(160px, 22vw, 260px);
+    box-sizing: border-box;
+}
+
+.meal-grid-item .card-body {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    flex: 1 1 auto !important;
+}
+
+.meal-grid-item .quick-rating-container {
+    min-height: 48px;
+}
+
+/* Explicit breakpoints for deterministic layouts */
+@media (min-width: 1200px) {
+    .meal-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+    .meal-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .meal-grid {
+        grid-template-columns: 1fr;
+    }
+    .meal-grid-item .meal-item-card {
+        min-height: 180px; /* slightly taller baseline on very small screens */
+    }
 }
 
 /* Highlight for the NEXT meal */
@@ -352,4 +426,197 @@
     font-weight: 600;
     color: #007a8c;
     margin-right: 0.5rem;
+}
+
+/* Mobile date carousel styles */
+.mobile-date-carousel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.mobile-date-viewport {
+    width: 100%;
+    height: 88px; /* fixed height per item to allow smooth translate */
+    overflow: hidden;
+    border-radius: 10px;
+}
+.mobile-date-track {
+    display: flex;
+    flex-direction: column;
+    transition: transform 350ms cubic-bezier(.22,.9,.37,1), opacity 200ms ease;
+}
+.mobile-date-item {
+    width: 100%;
+    height: 88px;
+    padding: 0.9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    transition: transform 300ms ease, box-shadow 200ms ease, opacity 200ms ease;
+}
+.mobile-date-item.selected {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(59,130,246,0.18);
+    transform: scale(1.02);
+}
+.mobile-nav-btn {
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    color: #64748b;
+    padding: 6px 8px;
+    cursor: pointer;
+}
+
+@media (min-width: 769px) {
+    .mobile-date-carousel, .mobile-date-viewport, .mobile-date-track, .mobile-date-item, .mobile-nav-btn {
+        display: none !important;
+    }
+}
+
+/* Mobile select styling */
+@media (max-width: 768px) {
+    .mobile-date-select {
+        width: 100%;
+        padding: 0.85rem 0.9rem;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        font-size: 1rem;
+        background: #ffffff;
+        color: #0f172a;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+}
+
+/* Show/hide desktop vs mobile date components */
+.mobile-date-dropdown { display: none; }
+.desktop-date-stack { display: block; }
+
+@media (max-width: 768px) {
+    /* Force mobile dropdown visible and hide desktop stacked cards */
+    .mobile-date-dropdown { display: block !important; }
+    .desktop-date-stack { display: none !important; }
+
+    /* Also hide any leftover direct date buttons on very small screens */
+    .desktop-date-stack > * { display: none !important; }
+}
+
+/* Make weekly schedule panels and cards span wider on mobile */
+@media (max-width: 768px) {
+    /* Constrain schedule panel to align with top cards and look neat on mobile */
+    .weekly-schedule-root {
+        display: block;
+    }
+        .weekly-schedule-root .weekly-panel {
+            max-width: 400px; /* slightly wider to improve readability on mobile */
+            margin: 12px auto; /* small gap under header */
+            padding: 1.25rem !important;
+            border-radius: 14px !important;
+            box-shadow: 0 8px 24px rgba(2,6,23,0.06);
+        }
+
+    /* Make inner meal cards fill the panel width and match top card styling */
+    .weekly-schedule-root .meal-grid-item .meal-item-card {
+        min-height: 120px;
+        width: 100%;
+        padding: 0.95rem !important;
+        border-radius: 12px !important;
+        box-shadow: 0 6px 18px rgba(2,6,23,0.04);
+    }
+
+    /* Ensure the mobile select aligns with panel width and looks like a pill */
+    .mobile-date-dropdown { max-width: 360px; margin: 6px auto 10px auto; }
+        .mobile-date-dropdown { max-width: 400px; margin: 6px auto 10px auto; }
+    .mobile-select-button {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #dbeafe;
+        box-shadow: 0 8px 18px rgba(59,130,246,0.06);
+        color: #0f172a;
+    }
+    .mobile-select-button:focus, .mobile-select-button:active {
+        outline: none;
+        box-shadow: 0 8px 22px rgba(59,130,246,0.12), 0 0 0 4px rgba(59,130,246,0.06);
+    }
+
+    /* Slightly larger spacing for mobile list items */
+    .mobile-select-list { padding: 8px; }
+    .mobile-select-item { padding: 12px 14px; }
+}
+
+/* Custom mobile dropdown styles */
+.mobile-date-dropdown {
+    position: relative;
+}
+.mobile-select-button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+    border: 1px solid #bfdbfe;
+    background: linear-gradient(180deg, #eaf4ff 0%, #dbeafe 100%);
+    box-shadow: 0 6px 18px rgba(59,130,246,0.12);
+    color: #073b8c;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.mobile-select-button:active { transform: translateY(1px); }
+.mobile-select-chevron { transition: transform 180ms ease; }
+.mobile-select-chevron.open { transform: rotate(180deg); }
+
+.mobile-select-list {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-top: 10px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(2,6,23,0.12);
+    max-height: 280px;
+    overflow: auto;
+    padding: 6px 6px;
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+    transform-origin: top center;
+    transition: opacity 160ms ease, transform 160ms ease;
+    z-index: 60;
+    pointer-events: none;
+}
+.mobile-select-list.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+
+.mobile-select-item {
+    list-style: none;
+    padding: 10px 12px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease, transform 140ms ease;
+}
+.mobile-select-item + .mobile-select-item { margin-top: 6px; }
+.mobile-select-item:hover { background: #f1f8ff; }
+.mobile-select-item.selected { background: linear-gradient(90deg,#dbeafe,#e6f0ff); color: #08306b; font-weight: 700; box-shadow: 0 6px 16px rgba(59,130,246,0.12); }
+.mobile-select-item-left { display:flex; flex-direction: column; }
+.mobile-select-day { font-size: 1.15rem; }
+.mobile-select-month { font-size: 0.75rem; opacity:0.8; margin-left:6px; }
+.today-badge { background:#3b82f6; color:white; padding:4px 8px; border-radius:999px; font-size:0.7rem; font-weight:700; }
+
+/* Ensure dropdown fits nicely in column */
+@media (max-width: 768px) {
+    .mobile-select-list { max-height: 320px; }
 }

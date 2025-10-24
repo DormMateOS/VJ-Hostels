@@ -377,16 +377,68 @@ h1, h2, h3, h4, h5, h6 {
 .desktop-nav-container {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.4rem;
   justify-content: center;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow-x: auto; /* allow horizontal scrolling on small desktops */
   padding: 0;
   width: 100%;
 }
 
 .desktop-nav-container::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
+}
+
+/* Make desktop navbar use maroon background to match header */
+.desktop-navbar {
+  background-color: #800020;
+}
+
+/* Ensure horizontal scroll area has no visible scrollbar across browsers */
+.desktop-nav-container {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Mobile nav item tweaks */
+.mobile-nav-item {
+  transition: background-color 0.15s ease, padding-left 0.15s ease;
+}
+
+.mobile-active {
+  background-color: rgba(255,255,255,0.08);
+}
+
+/* Navbar hamburger and drawer styles */
+.navbar-mobile-header {
+  padding: 0.25rem 0.5rem;
+}
+
+.navbar-hamburger {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+}
+
+.navbar-drawer {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make sure nav links inside the drawer look like sidebar links */
+.navbar-drawer .nav-item {
+  padding: 0.9rem 1.25rem;
+  border-radius: 0 25px 25px 0;
+  margin: 0.2rem 0;
+}
+
+@media (max-width: 420px) {
+  .navbar-drawer {
+    width: 90% !important;
+  }
 }
 
 .desktop-nav-item {

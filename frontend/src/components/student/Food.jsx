@@ -89,6 +89,10 @@ const Food = () => {
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [quickRating, setQuickRating] = useState({ meal: null, rating: 0, submitted: false });
     const [submittedQuickRatings, setSubmittedQuickRatings] = useState({});
+    // Local, optimistic aggregate ratings so UI updates immediately after a user rates
+    const [aggregatedRatings, setAggregatedRatings] = useState({});
+    // Track whether the current user has already submitted detailed feedback per meal
+    const [submittedFeedbacks, setSubmittedFeedbacks] = useState({});
     // --- END: STATE ---
 
 
@@ -121,6 +125,8 @@ const Food = () => {
             setMenuLoading(true);
             const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/today-from-schedule`);
             setMenu(response.data);
+            // detect and mark meals already submitted by this user (if API provides hints)
+            setSubmittedFeedbacks(detectSubmittedFromMenu(response.data));
             setError(null);
         } catch (err) {
             console.error('Error fetching today\'s menu:', err);
@@ -161,6 +167,10 @@ const Food = () => {
             setSubmitSuccess(true);
             setFeedback('');
             setError(null);
+            // Optimistically update local aggregate so UI reflects the new feedback immediately
+            updateLocalAggregate(mealType, parseInt(rating));
+            // Mark that the current user has submitted feedback for this meal (prevents duplicates)
+            setSubmittedFeedbacks(prev => ({ ...prev, [mealType]: true }));
             setTimeout(() => {
                 setSubmitSuccess(false);
             }, 3000);
@@ -173,7 +183,8 @@ const Food = () => {
     };
 
     const handleQuickRating = async (meal, ratingValue) => {
-        if (submittedQuickRatings[meal] || (quickRating.meal === meal && quickRating.submitted)) return;
+        // Don't allow quick-rating if user already submitted detailed feedback for this meal
+        if (submittedFeedbacks[meal] || submittedQuickRatings[meal] || (quickRating.meal === meal && quickRating.submitted)) return;
 
         await new Promise(resolve => setTimeout(resolve, 500)); 
 
@@ -183,7 +194,9 @@ const Food = () => {
         }));
 
         setQuickRating({ meal: meal, rating: ratingValue, submitted: true });
-        
+        // Optimistically update local aggregate so UI shows the new rating immediately
+        updateLocalAggregate(meal, ratingValue);
+
         setTimeout(() => {
             setQuickRating(prev => (prev.meal === meal ? { meal: null, rating: 0, submitted: false } : prev));
         }, 2500); 
@@ -193,7 +206,8 @@ const Food = () => {
 
     // --- START: RENDER HELPERS ---
     const renderStarRating = () => {
-        const isCurrentMealValid = canSubmitFeedback(mealType);
+        const isSubmittedForMeal = !!submittedFeedbacks[mealType];
+        const isCurrentMealValid = canSubmitFeedback(mealType) && !isSubmittedForMeal;
         return (
             <div 
   className={`rating-container ${!isCurrentMealValid ? 'text-muted' : ''}`} 
@@ -227,7 +241,7 @@ const Food = () => {
 
     const renderRatingWidget = (meal) => {
         const status = getMealStatus(meal);
-        const hasBeenRated = !!submittedQuickRatings[meal]; 
+        const hasBeenRated = !!submittedQuickRatings[meal] || !!submittedFeedbacks[meal]; 
         const currentSubmittedRating = submittedQuickRatings[meal] || 0;
 
         const canRateNow = status.status === 'Ended' && !hasBeenRated;
@@ -290,6 +304,74 @@ const Food = () => {
                 )}
             </div>
         );
+    };
+    // Helper: update local/optimistic aggregate for a meal
+    const updateLocalAggregate = (meal, newRating) => {
+        if (!meal || newRating == null) return;
+        setAggregatedRatings(prev => {
+            const existing = prev[meal];
+            let baseAvg = 0;
+            let baseCount = 0;
+
+            if (existing && existing.count != null) {
+                baseAvg = Number(existing.avg ?? 0);
+                baseCount = Number(existing.count ?? 0);
+            } else if (menu && menu[meal]) {
+                const m = menu[meal];
+                baseAvg = Number(m.avgRating ?? m.ratingAvg ?? m.rating ?? m.rating_mean ?? m.ratingAverage ?? 0);
+                baseCount = Number(m.ratingCount ?? m.ratingsCount ?? m.count ?? m.reviews ?? 0);
+            }
+
+            const newCount = (baseCount || 0) + 1;
+            const newAvg = newCount === 0 ? null : ((baseAvg * (baseCount || 0)) + Number(newRating)) / newCount;
+
+            return {
+                ...prev,
+                [meal]: { avg: newAvg, count: newCount }
+            };
+        });
+    };
+
+    // Try to detect whether the current user already submitted feedback for meals from server payload
+    const detectSubmittedFromMenu = (menuData) => {
+        const result = {};
+        if (!menuData) return result;
+        const meals = ['breakfast','lunch','snacks','dinner'];
+        const truthyFlags = ['yourRating','userRated','ratedByUser','userHasRated','hasRated','rated','ratingSubmitted','feedbackSubmitted','yourFeedback'];
+        meals.forEach(m => {
+            const item = menuData[m];
+            if (!item) return;
+            for (const f of truthyFlags) {
+                if (item[f] != null) {
+                    const v = item[f];
+                    if (v === true || (typeof v === 'number' && v > 0) || (typeof v === 'string' && v.trim() !== '')) {
+                        result[m] = true;
+                        break;
+                    }
+                }
+            }
+        });
+        return result;
+    };
+
+    // Aggregate rating display (prefer local aggregatedRatings if present, else read from `menu`)
+    const getAggregateRating = (meal) => {
+        if (aggregatedRatings && aggregatedRatings[meal]) {
+            const a = aggregatedRatings[meal];
+            return {
+                avg: a.avg != null ? Number(a.avg) : null,
+                count: a.count != null ? Number(a.count) : null
+            };
+        }
+
+        if (!menu || !menu[meal]) return null;
+        const m = menu[meal];
+        const avg = m.avgRating ?? m.ratingAvg ?? m.rating ?? m.rating_mean ?? m.ratingAverage ?? null;
+        const count = m.ratingCount ?? m.ratingsCount ?? m.count ?? m.reviews ?? null;
+        return {
+            avg: avg != null ? Number(avg) : null,
+            count: count != null ? Number(count) : null
+        };
     };
 
     const formatDate = (dateString) => {
@@ -377,11 +459,12 @@ const Food = () => {
         };
 
         return (
-            <div className="col-6 col-md-3">
+            <div className="tab-grid-item" key={id}>
                 <div
                     onClick={() => setActiveTab(id)}
                     onMouseEnter={applyHover}
                     onMouseLeave={removeHover}
+                    className={`tab-card ${isActive ? 'active-tab-card' : ''}`}
                     style={defaultStyle}
                 >
                     <i className={`bi ${icon}`} style={{ fontSize: '1.1rem' }}></i>
@@ -400,69 +483,109 @@ const Food = () => {
 
             {/* Tabs (Custom UI) */}
             <div className="tab-container">
-                <div className="row g-2 w-100 mx-auto">
+                <div className="tab-grid">
                     {tabs.map(renderTabButton)}
                 </div>
             </div>
 
             {/* --- Today's Menu Tab (Restored) --- */}
-            {activeTab === 'menu' && (
-                <div className="menu-card">
-                    {menuLoading ? (
-                        <div className="text-center my-4">
-                            <div className="spinner-border text-primary" role="status"></div>
-                            <p className="mt-2">Loading today's menu...</p>
-                        </div>
-                    ) : menu ? (
-                        <>
-                            <h3>Today's Menu - {formatDate(menu.date)}</h3>
-                            <div className="row g-4">
-                                {['breakfast','lunch','snacks','dinner'].map(meal => {
-                                    if(!menu[meal]) return null;
-                                    const status = getMealStatus(meal);
-                                    const isNextMeal = meal===getNextMeal() && status.status!=='Ended';
-                                    
-                                    const badgeClass = badgeColorMap[status.color] || 'bg-secondary';
-                                    
-                                    return (
-                                        <div key={meal} className="col-12 col-md-6 d-flex h-100 mb-4">
-                                            <div 
-                                                className={`meal-item-card w-100 ${isNextMeal ? 'next-meal' : ''}`}
-                                                style={{
-                                                    border: '1px solid whitesmoke',
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)', 
-                                                    padding: '1rem',
-                                                    borderRadius: '10px',
-                                                    display: 'flex', 
-                                                    flexDirection: 'column',
-                                                    justifyContent: 'space-between'
-                                                }}
-                                            >
-                                                <div className="card-body p-0 d-flex flex-column justify-content-between h-100">
-                                                    <div>
-                                                        <div className="meal-title d-flex align-items-center justify-content-start mb-1" >
-                                                            <span className="meal-icon me-2" style={{fontSize:'1.2rem'}}>{getMealIcon(meal)}</span>
-                                                            <BlinkingLight color={status.color} />
-                                                            <h6 className="mb-0 ms-1 text-capitalize">{meal}</h6>
-                                                            <small className={`ms-2 badge ${badgeClass}`}>
-                                                                {status.status}
-                                                            </small>
-                                                        </div>
-                                                        
-                                                        <p className="meal-content mb-1 ps-4">{menu[meal]}</p>
-                                                    </div>
-                                                    
-                                                    {renderRatingWidget(meal)}
-                                                </div>
+            {/* --- Today's Menu Tab (Restored) --- */}
+{activeTab === 'menu' && (
+    <div className="menu-card">
+        {menuLoading ? (
+            <div className="text-center my-4">
+                <div className="spinner-border text-primary" role="status"></div>
+                <p className="mt-2">Loading today's menu...</p>
+            </div>
+        ) : menu ? (
+            <>
+                <h3>Today's Menu - {formatDate(menu.date)}</h3>
+                <div 
+                    className="row"
+                    style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '10px', // smaller gap between cards
+                        margin: '0 -5px'
+                    }}
+                >
+                    {['breakfast','lunch','snacks','dinner'].map(meal => {
+                        if(!menu[meal]) return null;
+                        const status = getMealStatus(meal);
+                        const isNextMeal = meal===getNextMeal() && status.status!=='Ended';
+                        
+                        const badgeClass = badgeColorMap[status.color] || 'bg-secondary';
+                        
+                        return (
+                            <div key={meal} 
+                                style={{
+                                    flex: '1 1 calc(50% - 10px)', // two cards per row, with gap
+                                    display: 'flex',
+                                    marginBottom: '10px',
+                                    minWidth: '250px'
+                                }}
+                            >
+                                <div 
+                                    className={`meal-item-card`}
+                                    style={{
+                                        border: '1px solid whitesmoke',
+                                        boxShadow: '0 1px 8px rgba(0,0,0,0.4)', 
+                                        padding: '1rem',
+                                        borderRadius: '10px',
+                                        display: 'flex', 
+                                        flexDirection: 'column',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        background: '#fff'
+                                    }}
+                                >
+                                    <div className="card-body p-0 d-flex flex-column justify-content-between h-100">
+                                        <div>
+                                            <div className="meal-title" style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.5rem' }} >
+                                                <span className="meal-icon" style={{fontSize:'1.2rem'}}>{getMealIcon(meal)}</span>
+                                                <BlinkingLight color={status.color} />
+                                                <h6 className="mb-0 text-capitalize">{meal}</h6>
+                                                <small className={`ms-2 badge ${badgeClass}`} style={{ marginLeft:'auto' }}>
+                                                    {status.status}
+                                                </small>
                                             </div>
+                                            
+                                            <p className="meal-content mb-1" style={{ paddingLeft:'1.5rem' }}>{menu[meal]}</p>
                                         </div>
-                                    )
-                                })}
+                                        
+                                        {/* Show aggregate/current student rating instead of interactive stars */}
+                                        <div style={{ marginTop: '0.8rem' }}>
+                                            {(() => {
+                                                const agg = getAggregateRating(meal);
+                                                if (!agg || agg.avg == null) {
+                                                    return <small className="text-muted">No ratings yet</small>;
+                                                }
+                                                const rounded = Math.round(agg.avg);
+                                                return (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                        <div style={{ display: 'flex', gap: '0.15rem' }} aria-hidden>
+                                                            {[1,2,3,4,5].map(s => (
+                                                                <span key={s} style={{ color: s <= rounded ? '#ffb020' : '#e6e6e6', fontSize: '1rem' }}>{'★'}</span>
+                                                            ))}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.95rem', color: '#334155', fontWeight: 600 }}>
+                                                            {agg.avg.toFixed(1)}{agg.count ? ` (${agg.count})` : ''}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </>
-                    ) : <div className="alert alert-warning">No menu available today.</div>}
+                        )
+                    })}
                 </div>
-            )}
+            </>
+        ) : <div className="alert alert-warning">No menu available today.</div>}
+    </div>
+)}
+
 
             {/* --- Feedback Form Tab (DEFINITIVE ALIGNMENT FIX) --- */}
             {activeTab === 'feedback' && (
@@ -513,18 +636,19 @@ const Food = () => {
                         <div className="col-12 col-md-4">
                             <label className="form-label d-block text-start fw-bold mb-2">Your Rating</label>
                             <div
-  className="border rounded d-flex align-items-center justify-content-start w-100 pl-[100px]"
-  style={{
-    minHeight: '56px',
-    borderColor: '#ff9800',
-    borderWidth: '2px',
-    fontWeight: 'bold',
-    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-    position: 'sticky',
-    top: '0',           // keeps it visible at top on scroll
-    backgroundColor: 'white', // needed for sticky
-    zIndex: 10
-  }}
+                                className="border rounded d-flex align-items-center justify-content-center w-100"
+                                style={{
+                                    minHeight: '56px',
+                                    borderColor: '#ff9800',
+                                    borderWidth: '2px',
+                                    fontWeight: 'bold',
+                                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                                    position: 'sticky',
+                                    top: '0',           // keeps it visible at top on scroll
+                                    backgroundColor: 'white', // needed for sticky
+                                    zIndex: 10,
+                                    padding: '0.25rem'
+                                }}
                             >
                                 {renderStarRating()}
                             </div>
@@ -532,6 +656,13 @@ const Food = () => {
                             {!canSubmitFeedback(mealType) && (
                                 <small className="text-danger d-block mt-2 text-start">
                                     <i className="bi bi-x-circle me-1"></i>Rating disabled.
+                                </small>
+                            )}
+
+                            {/* If user already submitted feedback for selected meal, show a message */}
+                            {submittedFeedbacks[mealType] && (
+                                <small className="text-success d-block mt-2 text-start">
+                                    <i className="bi bi-check2-circle me-1"></i>You have already submitted feedback for this meal.
                                 </small>
                             )}
                         </div>
@@ -576,7 +707,7 @@ const Food = () => {
                         <button
                             type="submit"
                             className="btn btn-primary btn-lg"
-                            disabled={submitting || !canSubmitFeedback(mealType)}
+                            disabled={submitting || !canSubmitFeedback(mealType) || !!submittedFeedbacks[mealType]}
                         >
                             {submitting ? (
                                 <>
