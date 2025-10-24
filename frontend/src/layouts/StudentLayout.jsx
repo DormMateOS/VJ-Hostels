@@ -6,6 +6,8 @@ import AnnouncementBanner from '../components/student/AnnouncementBanner'
 import useCurrentUser from '../hooks/student/useCurrentUser'
 import { useAuthStore } from '../store/authStore'
 import '../styles/student/custom.css'
+import logo from '../assets/vnrvjiet-logo.png';
+
 
 function StudentLayout() {
   const navigate = useNavigate()
@@ -15,30 +17,21 @@ function StudentLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  // Check if current page is announcements page
   const isAnnouncementsPage = location.pathname.includes('/announcements')
-const handleLogout = async () => {
-  try {
-    // Call auth store logout first to clear tokens and reset auth state
-    await logout()
-    
-    // Clear user data
-    clearUser()
-    
-    // Force a full page reload to login page
-    window.location.href = '/login'
-  } catch (error) {
-    console.error('Logout error:', error)
-    // Even if there's an error, navigate to login with reload
-    window.location.href = '/login'
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      clearUser()
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Logout error:', error)
+      window.location.href = '/login'
+    }
   }
-}
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768)
-    }
-
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
@@ -47,11 +40,20 @@ const handleLogout = async () => {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen)
   const closeSidebar = () => isMobile && setSidebarOpen(false)
 
+  // close on Escape for better UX
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && sidebarOpen) setSidebarOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sidebarOpen])
+
   return (
-    <div className="min-h-screen bg-gray-50" >
+    <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
       <nav style={{
-        backgroundColor: '#f55353ff',
+        backgroundColor: '#800000', // maroon
         color: 'white',
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         position: 'sticky',
@@ -63,12 +65,9 @@ const handleLogout = async () => {
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingLeft: '1rem',
-          paddingRight: '1rem',
-          paddingTop: '0.5rem',
-          paddingBottom: '0.5rem'
+          padding: '0.5rem 1rem'
         }}>
-          {/* Left Section: Menu Button (mobile) + Logo + Title */}
+          {/* Left Section */}
           <div style={{
             display: 'flex',
             flexDirection: 'row',
@@ -86,7 +85,7 @@ const handleLogout = async () => {
                   cursor: 'pointer',
                   transition: 'background-color 0.15s ease-in-out'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#4d0000'}
                 onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                 onClick={toggleSidebar}
                 aria-label="Toggle menu"
@@ -100,7 +99,11 @@ const handleLogout = async () => {
               alignItems: 'center',
               gap: '0.5rem'
             }}>
-              <img src="/logo.png" alt="VJ Hostels" height={50}  />
+<img 
+  src={logo} 
+  alt="VJ Hostels" 
+  style={{ height: '35px', width: 'auto' }} 
+/>
               <h1 style={{
                 fontSize: '1.25rem',
                 fontWeight: 'bold',
@@ -111,7 +114,7 @@ const handleLogout = async () => {
             </div>
           </div>
 
-          {/* Center Section: Nav Elements (desktop only) */}
+          {/* Center Section */}
           {!isMobile && (
             <div style={{
               display: 'flex',
@@ -123,24 +126,21 @@ const handleLogout = async () => {
             </div>
           )}
 
-          {/* Right Section: Logout Button */}
+          {/* Logout Button */}
           <button
             style={{
               backgroundColor: 'white',
-              color: '#b91c1c',
+              color: '#800000',
               fontWeight: '600',
-              paddingLeft: '1rem',
-              paddingRight: '1rem',
-              paddingTop: '0.5rem',
-              paddingBottom: '0.5rem',
+              padding: '0.5rem 1rem',
               borderRadius: '0.5rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
               border: 'none',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               transition: 'background-color 0.15s ease-in-out'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#fef2f2'}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3e8e8'}
             onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
             onClick={handleLogout}
           >
@@ -148,7 +148,6 @@ const handleLogout = async () => {
           </button>
         </div>
       </nav>
-
 
       {/* Mobile Sidebar */}
       {isMobile && (
@@ -159,23 +158,25 @@ const handleLogout = async () => {
               top: 0,
               left: 0,
               height: '100vh',
-              width: '280px',
-              backgroundColor: '#dc2626',
+              width: 'min(320px, 80%)',
+              backgroundColor: '#800000',
               color: 'white',
-              boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1)',
               zIndex: 50,
               transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
               transition: 'transform 0.3s ease-in-out',
               overflowY: 'auto'
             }}
+            aria-hidden={!sidebarOpen}
+            id="student-sidebar"
           >
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '1rem',
-              borderBottom: '1px solid #ef4444',
-              backgroundColor: '#b91c1c'
+              borderBottom: '1px solid #990000',
+              backgroundColor: '#660000'
             }}>
               <h2 style={{
                 fontWeight: 'bold',
@@ -201,15 +202,15 @@ const handleLogout = async () => {
               </button>
             </div>
             <div style={{
-              padding: '0',
+              padding: 0,
               height: 'calc(100vh - 80px)',
               overflowY: 'auto'
             }}>
-              <Navbar onNavigate={closeSidebar} isDesktop={false} />
+              <Navbar onNavigate={closeSidebar} isDesktop={false} isInSidebar={true} />
             </div>
           </aside>
 
-          {/* Overlay for mobile */}
+          {/* Overlay */}
           {sidebarOpen && (
             <div
               style={{
@@ -228,10 +229,10 @@ const handleLogout = async () => {
         </>
       )}
 
-      {/* Announcement Banner - Show on all pages except announcements */}
+      {/* Announcement Banner */}
       {!isAnnouncementsPage && <AnnouncementBanner />}
 
-      {/* Content */}
+      {/* Page Content */}
       <main className="flex-1 content-area">
         <div className="content-wrapper">
           <Outlet />
@@ -241,4 +242,4 @@ const handleLogout = async () => {
   )
 }
 
-export default StudentLayout;
+export default StudentLayout

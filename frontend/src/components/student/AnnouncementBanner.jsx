@@ -9,7 +9,7 @@ const AnnouncementBanner = () => {
   const [loading, setLoading] = useState(true);
   const [dismissed, setDismissed] = useState(false);
   const [slide, setSlide] = useState(false);
-  const [direction, setDirection] = useState('next'); // 'next' or 'prev'
+  const [direction, setDirection] = useState('next');
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -27,22 +27,28 @@ const AnnouncementBanner = () => {
     fetchAnnouncements();
   }, []);
 
-  const handleNext = () => {
-    setDirection('next');
-    setSlide(true);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % announcements.length);
-      setSlide(false);
-    }, 300);
-  };
+  // Auto-slide every 4 seconds
+  useEffect(() => {
+    if (announcements.length <= 1) return;
+    const interval = setInterval(() => {
+      setDirection('next');
+      setSlide(true);
+      setTimeout(() => {
+        setCurrentIndex((prev) => (prev + 1) % announcements.length);
+        setSlide(false);
+      }, 400);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [announcements]);
 
-  const handlePrev = () => {
-    setDirection('prev');
+  const handleDotClick = (index) => {
+    if (index === currentIndex) return;
+    setDirection(index > currentIndex ? 'next' : 'prev');
     setSlide(true);
     setTimeout(() => {
-      setCurrentIndex((prev) => (prev - 1 + announcements.length) % announcements.length);
+      setCurrentIndex(index);
       setSlide(false);
-    }, 300);
+    }, 400);
   };
 
   const handleDismiss = () => setDismissed(true);
@@ -51,76 +57,165 @@ const AnnouncementBanner = () => {
 
   const current = announcements[currentIndex];
 
-  // Inline styles for sliding effect
-  const slideStyle = {
-    transition: 'transform 0.3s ease, opacity 0.3s ease',
-    transform: slide ? (direction === 'next' ? 'translateX(100%)' : 'translateX(-100%)') : 'translateX(0)',
-    opacity: slide ? 0 : 1,
-    borderRadius: '8px',
-  };
-
-  const contentStyle = {
-    padding: '0.5rem 1rem',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: '6px',
-  };
-
-  const buttonStyle = {
-    minWidth: '32px',
-    minHeight: '32px',
-    borderRadius: '50%',
-    fontWeight: 'bold',
-    fontSize: '1rem',
-    padding: 0,
-    lineHeight: 1,
-  };
-
   return (
-    <div className="position-relative mx-3 mt-3">
+    <div
+      style={{
+        position: 'relative',
+        margin: '1rem auto',
+        padding: '0.85rem 1.25rem 1.4rem',
+        maxWidth: '650px',
+        background: '#0a1f4f', // Dark Blue solid background
+        borderRadius: '14px',
+        overflow: 'hidden',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+        transition: 'all 0.3s ease',
+      }}
+    >
+      {/* Main content */}
       <div
-        className="alert alert-primary d-flex align-items-start mb-0 shadow-sm"
-        style={slideStyle}
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '0.9rem',
+          flex: 1,
+          transform: slide
+            ? direction === 'next'
+              ? 'translateX(-25px)'
+              : 'translateX(25px)'
+            : 'translateX(0)',
+          opacity: slide ? 0 : 1,
+          transition: 'transform 0.45s ease, opacity 0.45s ease',
+        }}
       >
-        {/* Icon */}
-        <Megaphone size={20} className="text-primary me-3 mt-1 flex-shrink-0" />
-
-        {/* Announcement Content */}
-        <div className="flex-grow-1" style={contentStyle}>
-          <h6 className="mb-1 fw-semibold text-dark">{current.title}</h6>
-          <p className="mb-0 text-muted small">{current.description}</p>
+        {/* 🔊 Animated Glowing Megaphone */}
+        <div style={{ position: 'relative' }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              background: 'rgba(0,150,255,0.2)',
+              transform: 'translate(-50%, -50%)',
+              animation: 'wave 1.8s ease-out infinite',
+            }}
+          ></div>
+          <Megaphone
+            size={24}
+            className="mt-1"
+            style={{
+              color: '#4dabf7',
+              zIndex: 2,
+              filter: 'drop-shadow(0 0 6px rgba(0,150,255,0.8))',
+              animation: 'glow 1.6s ease-in-out infinite',
+            }}
+          />
         </div>
 
-        {/* Dismiss */}
-        <button
-          className="btn btn-sm btn-link text-muted ms-2 p-0"
-          onClick={handleDismiss}
-          aria-label="Dismiss"
-        >
-          <X size={18} />
-        </button>
+        {/* Text */}
+        <div style={{ flex: 1 }}>
+          <h6
+            className="mb-1 fw-semibold"
+            style={{
+              color: '#e0f0ff',
+              fontSize: '1rem',
+              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+            }}
+          >
+            {current.title}
+          </h6>
+          <p
+            className="mb-0 small"
+            style={{
+              color: 'rgba(224,240,255,0.85)',
+              lineHeight: 1.45,
+              fontSize: '0.9rem',
+            }}
+          >
+            {current.description}
+          </p>
+        </div>
       </div>
 
-      {/* Slide Controls */}
+      {/* Dismiss Button */}
+      <button
+        onClick={handleDismiss}
+        aria-label="Dismiss"
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'rgba(224,240,255,0.7)',
+          padding: 0,
+          marginLeft: '0.5rem',
+          cursor: 'pointer',
+        }}
+      >
+        <X size={18} />
+      </button>
+
+      {/* Dots Indicator */}
       {announcements.length > 1 && (
-        <div className="position-absolute top-50 start-0 translate-middle-y w-100 d-flex justify-content-between px-2">
-          <button
-            className="btn btn-light border shadow-sm"
-            onClick={handlePrev}
-            style={buttonStyle}
-            aria-label="Previous"
-          >
-            &lt;
-          </button>
-          <button
-            className="btn btn-light border shadow-sm"
-            onClick={handleNext}
-            style={buttonStyle}
-            aria-label="Next"
-          >
-            &gt;
-          </button>
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '8px',
+          }}
+        >
+          {announcements.map((_, index) => (
+            <div
+              key={index}
+              onClick={() => handleDotClick(index)}
+              style={{
+                width: currentIndex === index ? '10px' : '8px',
+                height: currentIndex === index ? '10px' : '8px',
+                borderRadius: '50%',
+                backgroundColor:
+                  currentIndex === index ? '#4dabf7' : 'rgba(255,255,255,0.3)',
+                boxShadow:
+                  currentIndex === index
+                    ? '0 0 8px rgba(0,150,255,0.7)'
+                    : 'none',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+              }}
+            ></div>
+          ))}
         </div>
       )}
+
+      {/* Keyframes for Glow & Waves */}
+      <style>
+        {`
+        @keyframes glow {
+          0%, 100% { filter: drop-shadow(0 0 4px rgba(0,150,255,0.8)); }
+          50% { filter: drop-shadow(0 0 10px rgba(0,150,255,1)); }
+        }
+
+        @keyframes wave {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.6;
+          }
+          70% {
+            transform: translate(-50%, -50%) scale(1.6);
+            opacity: 0.2;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0;
+          }
+        }
+        `}
+      </style>
     </div>
   );
 };
