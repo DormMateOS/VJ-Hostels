@@ -22,7 +22,12 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('guard_token');
+      // Check for guard_token first (username/password login)
+      // Then check for auth-token or token (Google OAuth login)
+      const token = localStorage.getItem('guard_token') || 
+                    localStorage.getItem('auth-token') || 
+                    localStorage.getItem('token');
+      
       if (!token) {
         setIsAuthenticated(false);
         setLoading(false);
@@ -36,6 +41,14 @@ export const AuthProvider = ({ children }) => {
           const decodedToken = JSON.parse(atob(tokenParts[1]));
           console.log('Decoded token payload:', decodedToken);
           
+          // Check if this is a security/guard token
+          if (decodedToken.role !== 'guard' && decodedToken.role !== 'security') {
+            console.log('Token is not for security role, clearing...');
+            setIsAuthenticated(false);
+            setLoading(false);
+            return;
+          }
+          
           // Extract user from token payload - support multiple formats
           let userData = decodedToken.user || decodedToken.guardId || decodedToken;
           
@@ -48,6 +61,13 @@ export const AuthProvider = ({ children }) => {
             if (!userData.id) {
               userData.id = userData._id;
             }
+            // Ensure role is set
+            userData.role = decodedToken.role || 'guard';
+          }
+          
+          // Store the token as guard_token for consistency
+          if (!localStorage.getItem('guard_token')) {
+            localStorage.setItem('guard_token', token);
           }
           
           setUser(userData);
@@ -56,15 +76,21 @@ export const AuthProvider = ({ children }) => {
         } catch (decodeError) {
           console.error('Token decode failed:', decodeError);
           localStorage.removeItem('guard_token');
+          localStorage.removeItem('auth-token');
+          localStorage.removeItem('token');
           setIsAuthenticated(false);
         }
       } else {
         localStorage.removeItem('guard_token');
+        localStorage.removeItem('auth-token');
+        localStorage.removeItem('token');
         setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.removeItem('guard_token');
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('token');
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
