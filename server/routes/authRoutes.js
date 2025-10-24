@@ -6,11 +6,14 @@ const AuthController = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
 function generateJwt(user, role) {
+  // Map security role to guard for consistency
+  const actualRole = role === 'security' ? 'guard' : (role || user.role);
+  
   return jwt.sign(
     {
       id: user._id,
       email: user.email,
-      role: role || user.role
+      role: actualRole
     },
     process.env.JWT_SECRET, 
     { expiresIn: "24h" }
@@ -63,14 +66,51 @@ router.get(
 
 
 // Check authentication status
-router.get('/check-auth', authenticateToken, (req, res) => {
+router.get('/check-auth', authenticateToken, async (req, res) => {
   try {
+    // Fetch full user data based on role
+    let userData = null;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    if (userRole === 'guard' || userRole === 'security') {
+      const Guard = require('../models/GuardModel');
+      userData = await Guard.findById(userId).select('-password');
+      if (userData) {
+        // Normalize role to 'security' for frontend consistency
+        userData = userData.toObject();
+        userData.role = 'security';
+      }
+    } else if (userRole === 'student') {
+      const Student = require('../models/StudentModel');
+      userData = await Student.findById(userId).select('-password');
+      if (userData) {
+        userData = userData.toObject();
+        userData.role = 'student';
+      }
+    } else if (userRole === 'admin') {
+      const Admin = require('../models/AdminModel');
+      userData = await Admin.findById(userId);
+      if (userData) {
+        userData = userData.toObject();
+        userData.role = 'admin';
+      }
+    }
+
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
     res.json({
       success: true,
-      user: req.user,
-      role: req.user.role
+      user: userData,
+      role: userData.role
     });
   } catch (error) {
+    console.error('Check auth error:', error);
     res.status(401).json({
       success: false,
       message: 'Not authenticated'

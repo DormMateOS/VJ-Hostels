@@ -9,9 +9,12 @@ const guardSchema = new mongoose.Schema({
   },
   username: {
     type: String,
-    unique: true,
-    sparse: true,  // Allow null values for Google OAuth users
-    trim: true
+    trim: true,
+    // Username is unique only when provided, not required for OAuth users
+    index: {
+      unique: true,
+      partialFilterExpression: { username: { $type: 'string' } }
+    }
   },
   password: {
     type: String,
@@ -96,5 +99,18 @@ guardSchema.pre('save', async function(next) {
     next(error);
   }
 });
+
+// Method to compare password for authentication
+guardSchema.methods.comparePassword = async function(candidatePassword) {
+  try {
+    // Skip password comparison for Google OAuth users
+    if (this.googleId && !this.password) {
+      return false;
+    }
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw error;
+  }
+};
 
 module.exports = mongoose.model('Guard', guardSchema);

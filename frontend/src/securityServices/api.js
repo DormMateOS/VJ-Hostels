@@ -10,7 +10,11 @@ const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('guard_token');
+  // Check for guard_token first, then fall back to auth-token or token
+  const token = localStorage.getItem('guard_token') || 
+                localStorage.getItem('auth-token') || 
+                localStorage.getItem('token');
+  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
     // Decode and log token for debugging
@@ -19,6 +23,12 @@ api.interceptors.request.use((config) => {
       if (tokenParts.length === 3) {
         const decoded = JSON.parse(atob(tokenParts[1]));
         console.log('Request with token payload:', decoded);
+        
+        // If using auth-token or token (OAuth), ensure it's also stored as guard_token
+        if (!localStorage.getItem('guard_token') && 
+            (decoded.role === 'guard' || decoded.role === 'security')) {
+          localStorage.setItem('guard_token', token);
+        }
       }
     } catch (e) {
       console.error('Could not decode token:', e);

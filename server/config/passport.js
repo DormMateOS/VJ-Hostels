@@ -79,24 +79,28 @@ passport.use('google-security', new GoogleStrategy({
             return done(null, false, { message: 'Only institutional emails allowed' });
         }
 
-        let guard = await Guard.findOne({ email: email });
+        let guard = await Guard.findOne({ $or: [{ googleId: profile.id }, { email: email }] });
         if (!guard) {
             // Create a new guard record with Google OAuth
             guard = await Guard.create({
                 googleId: profile.id,
-                username: profile.displayName,
                 name: profile.displayName,
                 email: email,
                 role: 'security',
-                password: 'oauth-generated', // Will be hashed by pre-save hook
-                phone: 'N/A',
-                shift: 'morning', // Default shift
+                phoneNumber: 'N/A', // Fixed: was 'phone'
+                shift: 'day', // Default shift
                 isActive: true,
+                // Don't set password for OAuth users
             });
+        } else if (!guard.googleId && guard.email === email) {
+            // Update existing guard with Google OAuth
+            guard.googleId = profile.id;
+            await guard.save();
         }
 
         return done(null, guard);
     } catch (err) {
+        console.error('Security OAuth error:', err);
         return done(err, null);
     }
 }));
