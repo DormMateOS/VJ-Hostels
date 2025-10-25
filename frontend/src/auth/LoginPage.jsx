@@ -16,6 +16,7 @@ const LoginPage = () => {
 
   const [theme, setTheme] = useState("dark");
   const [selectedRole, setSelectedRole] = useState("");
+  const [hoverRole, setHoverRole] = useState(null);
 
   const isDark = theme === "dark";
 
@@ -191,17 +192,16 @@ if (authStatus === "success" && token && role) {
                 color: themeStyles.textColor,
                 transition: "box-shadow 0.3s ease, border 0.3s ease",
                 minWidth: "100px",
+                boxShadow:
+                  hoverRole === role.id
+                    ? "0 0 12px rgba(59,130,246,0.6)"
+                    : selectedRole === role.id
+                    ? "0 0 18px rgba(59,130,246,0.7)"
+                    : "none",
               }}
               onClick={() => setSelectedRole(role.id)}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow =
-                  "0 0 12px rgba(59,130,246,0.6)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = selectedRole === role.id
-                  ? "0 0 18px rgba(59,130,246,0.7)"
-                  : "none";
-              }}
+              onMouseEnter={() => setHoverRole(role.id)}
+              onMouseLeave={() => setHoverRole(null)}
             >
               <span style={{ fontSize: "1.2rem" }}>{role.icon}</span>
               <div style={{ fontSize: "0.9rem", marginTop: "4px" }}>

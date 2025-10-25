@@ -27,7 +27,7 @@ const GoogleOAuthButton = ({
       whileTap={{ scale: isDisabled ? 1 : 0.97 }}
       onClick={handleGoogleLogin}
       disabled={isDisabled}
-      className={`w-full flex items-center justify-center gap-3 px-6 py-3 font-semibold transition-all duration-200 ${
+  className={`w-full flex items-center justify-center gap-4 px-6 py-3 font-semibold transition-all duration-200 ${
         isDisabled
           ? "cursor-not-allowed opacity-60"
           : isDark
@@ -70,9 +70,15 @@ const GoogleOAuthButton = ({
               filter: isDark
                 ? "none"
                 : "drop-shadow(0 1px 2px rgba(0,0,0,0.2))",
+              marginRight: "12px",
+              display: "inline-block",
+              verticalAlign: "middle",
             }}
           />
-          <span className="text-sm font-medium tracking-wide">
+          <span
+            className="text-sm font-medium tracking-wide"
+            style={{ display: "inline-block", verticalAlign: "middle", lineHeight: "20px" }}
+          >
             Continue with Google
           </span>
         </>

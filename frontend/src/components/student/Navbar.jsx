@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import useCurrentUser from '../../hooks/student/useCurrentUser'
-import { Home, Bell, Users, MessageSquare, LogOut, User, Utensils, UserCheck, Menu, X } from 'lucide-react';
+import { Home, Bell, Users, MessageSquare, LogOut, User, Utensils, UserCheck, Menu, X, ChevronRight } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import '../../styles/student/custom.css';
 
@@ -104,13 +104,13 @@ function Navbar({ onNavigate, isDesktop = false, isInSidebar = false }) {
                         padding: '0.5rem 0',
                         overflowY: 'auto'
                     }}>
-                        <NavItem icon={<Home size={20} />} label="Home" to="" isActive={location.pathname === '/home' || location.pathname === '/home/'} onClick={handleNavClick} />
-                        <NavItem icon={<Bell size={20} />} label="Announcements" to="announcements" isActive={location.pathname.includes('/home/announcements')} onClick={handleNavClick} />
-                        <NavItem icon={<MessageSquare size={20} />} label="Complaints" to="complaints" isActive={location.pathname.includes('/home/complaints')} onClick={handleNavClick} />
-                        <NavItem icon={<LogOut size={20} />} label="Outpass" to="outpass" isActive={location.pathname.includes('/home/outpass')} onClick={handleNavClick} />
-                        <NavItem icon={<User size={20} />} label="Student Profile" to="profile" isActive={location.pathname.includes('/home/profile')} onClick={handleNavClick} />
-                        <NavItem icon={<Utensils size={20} />} label="Food" to="food" isActive={location.pathname.includes('/home/food')} onClick={handleNavClick} />
-                        <NavItem icon={<UserCheck size={20} />} label="Visitors" to="visitors" isActive={location.pathname.includes('/home/visitors')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Home" to="" isActive={location.pathname === '/home' || location.pathname === '/home/'} onClick={handleNavClick} />
+                        <SidebarNavItem label="Announcements" to="announcements" isActive={location.pathname.includes('/home/announcements')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Complaints" to="complaints" isActive={location.pathname.includes('/home/complaints')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Outpass" to="outpass" isActive={location.pathname.includes('/home/outpass')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Student Profile" to="profile" isActive={location.pathname.includes('/home/profile')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Food" to="food" isActive={location.pathname.includes('/home/food')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Visitors" to="visitors" isActive={location.pathname.includes('/home/visitors')} onClick={handleNavClick} />
                     </nav>
 
                     <div style={{
@@ -188,12 +188,7 @@ const NavItem = ({ icon, label, to, isActive, onClick, isDesktop = false }) => {
                 }
             }}
         >
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '24px'
-            }}>
+            <div className="icon-container" style={{ minWidth: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {icon}
             </div>
             <span style={{
@@ -201,6 +196,20 @@ const NavItem = ({ icon, label, to, isActive, onClick, isDesktop = false }) => {
             }}>
                 {label}
             </span>
+        </Link>
+    );
+};
+
+const SidebarNavItem = ({ label, to, isActive, onClick }) => {
+    return (
+        <Link
+            to={to}
+            onClick={onClick}
+            className={`sidebar-large-item ${isActive ? 'active' : ''}`}
+            aria-current={isActive ? 'page' : undefined}
+        >
+            <span className="sidebar-label">{label}</span>
+            <ChevronRight size={18} className="sidebar-arrow" />
         </Link>
     );
 };

@@ -2323,6 +2323,163 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: none;
 }
 
+/* Outpass: two-column layout for date/time fields on wider screens */
+.form-row.two-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 992px) {
+  .form-row.two-columns {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+/* Tweak datepicker input to be more rounded and roomy */
+.form-input {
+  border-radius: 10px;
+  padding: 0.9rem;
+}
+
+/* react-datepicker overrides for cleaner, rounded look */
+.react-datepicker {
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  font-size: 0.95rem;
+}
+
+.react-datepicker__header {
+  background: linear-gradient(90deg, #f7fbff, #ffffff);
+  border-bottom: 1px solid #eee;
+}
+
+.react-datepicker__day--selected, .react-datepicker__day--keyboard-selected {
+  background: #2d7cc4 !important;
+  color: #fff !important;
+  border-radius: 6px;
+}
+
+.react-datepicker__time-list {
+  padding: 0.25rem;
+}
+
+.react-datepicker__time-list li {
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  margin: 0.1rem 0;
+}
+
+.react-datepicker__time-list li:hover {
+  background: rgba(45,124,196,0.06);
+  color: #0f5db3;
+}
+
+/* Improve visibility of the time column */
+.react-datepicker__time-container {
+  border-left: 1px solid #eee;
+}
+
+/* Ensure focus styles are visible */
+.form-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(52,152,219,0.12);
+}
+
+/* Mobile tweaks for react-datepicker so it stays centered and visible */
+@media (max-width: 480px) {
+  .react-datepicker {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: 95vw;
+    width: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+    z-index: 9999;
+  }
+
+  /* Remove the small triangle on mobile and keep calendar centered */
+  .react-datepicker__triangle {
+    display: none;
+  }
+
+  /* Make time list taller and centered within viewport */
+  .react-datepicker__time-container {
+    max-height: 60vh;
+  }
+
+  .react-datepicker__time-list {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+}
+
+/* Keep the little arrow centered under the input on desktop */
+.react-datepicker__triangle {
+  left: 50% !important;
+  transform: translateX(-50%);
+}
+
+/* Slightly nudge the triangle so it appears above the popup correctly */
+.react-datepicker__triangle:before,
+.react-datepicker__triangle:after {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Ensure the datepicker fits within the viewport and stack time column on small widths */
+.react-datepicker {
+  box-sizing: border-box;
+  max-width: 720px; /* reasonable maximum on large screens */
+  width: auto;
+}
+
+.react-datepicker__month-container {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.react-datepicker__time-container {
+  max-width: 160px;
+  box-sizing: border-box;
+}
+
+/* Responsive: on narrower screens make calendar full width and stack time list below */
+@media (max-width: 900px) {
+  .react-datepicker {
+    width: calc(100vw - 32px) !important;
+    max-width: calc(100vw - 32px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+
+  .react-datepicker__month-container {
+    display: block;
+    width: 100%;
+  }
+
+  .react-datepicker__time-container {
+    display: block;
+    position: relative;
+    width: 100%;
+    border-left: none;
+    margin-top: 10px;
+  }
+
+  .react-datepicker__time-list {
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+}
+
+/* On very narrow screens make sure the popup doesn't overflow the top */
+@media (max-width: 480px) {
+  .react-datepicker {
+    top: 10vh !important;
+    max-height: 80vh;
+  }
+}
+
 .form-button-secondary {
   background: #6c757d;
   color: white;
@@ -3651,4 +3808,118 @@ h1, h2, h3, h4, h5, h6 {
 .announcement-card-text {
   line-height: 1.6;
   margin-bottom: 8px;
+}
+
+/* Ensure nav icons always sit to the LEFT of the label and are visible
+   This forces LTR row layout for nav items and sets icon order/spacing. */
+.nav-item {
+  /* Ensure LTR row layout and consistent spacing across contexts */
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  padding: 0.6rem 0.8rem !important;
+  border-radius: 12px !important;
+  transition: background-color 0.18s ease, transform 0.12s ease, padding-left 0.12s ease;
+}
+
+.nav-item .icon-container {
+  /* Round icon background to make the icon pop on dark maroon background */
+  order: 0 !important;
+  margin-right: 0 !important; /* gap handles spacing now */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 999px !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  flex-shrink: 0 !important;
+}
+
+.nav-item span {
+  order: 1 !important;
+}
+
+/* Small tweaks per context */
+.mobile-nav-item {
+  padding-left: 1.1rem !important;
+}
+
+.mobile-nav-item .icon-container {
+  min-width: 36px !important;
+  min-height: 36px !important;
+}
+
+.desktop-nav-item .icon-container {
+  margin-right: 0 !important;
+}
+
+/* Make sure SVG icons inherit text color for contrast on dark backgrounds */
+.nav-item .icon-container svg {
+  color: inherit !important;
+  fill: currentColor !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Hover/active tweaks for better affordance */
+.nav-item:hover {
+  background-color: rgba(255,255,255,0.08) !important;
+  transform: translateX(4px);
+}
+
+.mobile-active, .nav-item.mobile-active {
+  background-color: rgba(255,255,255,0.09) !important;
+}
+
+.nav-item.active, .desktop-nav-item.active {
+  background-color: #ffffff !important;
+  color: #800020 !important; /* maroon text on white active bg */
+}
+
+.nav-item.active .icon-container, .desktop-nav-item.active .icon-container {
+  background-color: rgba(128,0,32,0.08) !important;
+}
+
+/* Sidebar large list style (matches reference photo) */
+.sidebar-large-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1.1rem 1rem;
+  color: rgba(255,255,255,0.95);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  font-weight: 700;
+  font-size: 1.125rem;
+  line-height: 1.1;
+  background: transparent;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidebar-large-item .sidebar-label {
+  display: block;
+}
+
+.sidebar-large-item .sidebar-arrow {
+  color: #FFC107; /* yellow arrow like reference */
+}
+
+.sidebar-large-item:hover {
+  background-color: rgba(255,255,255,0.03);
+}
+
+.sidebar-large-item.active {
+  background-color: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+/* Slightly bolder and larger on small screens */
+@media (max-width: 420px) {
+  .sidebar-large-item {
+    font-size: 1.05rem;
+    padding: 1rem 0.9rem;
+  }
 }
