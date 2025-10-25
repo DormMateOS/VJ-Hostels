@@ -98,6 +98,24 @@ const StudentFoodManager = () => {
                             <i className="bi bi-graph-up me-2"></i>
                             Test Analytics API
                         </button>
+                        <button 
+                            className="btn btn-warning"
+                            onClick={async () => {
+                                try {
+                                    const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/debug/food-menus`, {
+                                        headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    console.log('Food Menus Debug:', response.data);
+                                    alert(`Found ${response.data.total} food menus in database. Today's menu: ${response.data.todayMenu ? 'Found' : 'Not found'}. Check console for details.`);
+                                } catch (error) {
+                                    console.error('Debug error:', error);
+                                    alert('Error fetching debug data');
+                                }
+                            }}
+                        >
+                            <i className="bi bi-search me-2"></i>
+                            Debug Food Menus
+                        </button>
                     </div>
                 )}
             </div>

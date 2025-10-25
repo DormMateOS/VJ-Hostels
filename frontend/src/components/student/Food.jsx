@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import useCurrentUser from '../../hooks/student/useCurrentUser';
-import FoodPauseManager from './FoodPauseManager';
+import FoodPauseManager from './FoodPauseManagerEnhanced';
 import FoodScheduleViewer from './FoodScheduleViewer';
 import '../../styles/student/Food.css';
 

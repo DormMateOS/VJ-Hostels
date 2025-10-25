@@ -110,9 +110,11 @@ outpassApp.put('/approve/:id', verifyAdmin, expressAsyncHandler(async (req, res)
             // Don't fail the outpass approval if food pause fails
         }
 
-        res.status(200).json({ 
-            message: "Outpass approved successfully", 
-            outpass 
+        res.status(200).json({
+            message: 'Outpass approved successfully',
+            outpass: updatedOutpass,
+            redirectToFoodPause: true, // Signal frontend to redirect
+            foodPauseUrl: `/student/food-pause?outpassId=${outpass._id}&approved=true`
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -298,6 +300,22 @@ outpassApp.post('/scan/in', expressAsyncHandler(async (req, res) => {
                 inTime: outpass.actualInTime
             }
         });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Get outpass details by ID
+outpassApp.get('/details/:id', expressAsyncHandler(async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const outpass = await Outpass.findById(id);
+        if (!outpass) {
+            return res.status(404).json({ message: "Outpass not found" });
+        }
+
+        res.status(200).json(outpass);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

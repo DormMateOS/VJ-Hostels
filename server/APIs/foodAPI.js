@@ -297,26 +297,151 @@ foodApp.post('/pause', expressAsyncHandler(async (req, res) => {
 foodApp.get('/student-status', expressAsyncHandler(async (req, res) => {
     try {
         const { studentId } = req.query;
+
         if (!studentId) {
             return res.status(400).json({ message: 'studentId is required' });
         }
-        const StudentModel = require('../models/StudentModel');
+        
         const student = await StudentModel.findOne({ rollNumber: studentId });
         if (!student) {
             return res.status(404).json({ message: 'Student not found' });
         }
-        // Assuming pause/resume info is stored in student document
-        // If not, adjust according to your schema
+
+        // Get food pause record for this student
+        const foodPause = await FoodPause.findOne({ student_id: student._id });
+        
+        if (!foodPause) {
+            return res.status(200).json({
+                pause_from: null,
+                resume_from: null,
+                pause_meals: null,
+                resume_meals: null
+            });
+        }
+
         res.status(200).json({
-            pause_from: student.pause_from || null,
-            resume_from: student.resume_from || null,
-            pause_meals: student.pause_meals || '',
-            resume_meals: student.resume_meals || ''
+            pause_from: foodPause.pause_from,
+            resume_from: foodPause.resume_from,
+            pause_meals: foodPause.pause_meals,
+            resume_meals: foodPause.resume_meals
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error fetching student status:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch student status',
+            error: error.message 
+        });
     }
 }));
+
+// Edit existing food pause (with time validation)
+foodApp.post('/edit-pause', expressAsyncHandler(async (req, res) => {
+    try {
+        const { 
+            studentId,       
+            pause_from, 
+            pause_meals
+        } = req.body;
+
+        if (!studentId || !pause_from || !pause_meals) {
+            return res.status(400).json({ 
+                message: 'studentId, pause_from, and pause_meals are required' 
+            });
+        }
+
+        const student = await StudentModel.findOne({ rollNumber: studentId });
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        // Check if student has existing pause
+        const existingPause = await FoodPause.findOne({ student_id: student._id });
+        if (!existingPause) {
+            return res.status(404).json({ message: 'No existing pause found to edit' });
+        }
+
+        // Validate edit timing (2 hours before meal)
+        const now = new Date();
+        const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+        const currentDate = now.toISOString().split('T')[0];
+        
+        const mealTimings = {
+            breakfast: { editDeadline: "05:00" },
+            lunch: { editDeadline: "10:30" },
+            snacks: { editDeadline: "14:30" },
+            dinner: { editDeadline: "17:30" }
+        };
+
+        // If editing today's pause, check time restrictions
+        if (pause_from === currentDate) {
+            const requestedMeals = pause_meals.split(',');
+            for (const meal of requestedMeals) {
+                const mealTrim = meal.trim();
+                if (mealTimings[mealTrim] && currentTime >= mealTimings[mealTrim].editDeadline) {
+                    return res.status(400).json({ 
+                        message: `Cannot edit ${mealTrim} - deadline passed (2 hours before meal time)` 
+                    });
+                }
+            }
+        }
+
+        // Update the pause
+        const updatedFoodPause = await FoodPause.findOneAndUpdate(
+            { student_id: student._id },
+            {
+                $set: {
+                    pause_from,
+                    pause_meals,
+                    resume_from: null, // Single day pause only
+                    resume_meals: null
+                }
+            },
+            { new: true, upsert: false }
+        );
+
+        res.status(200).json({
+            message: 'Food service pause updated successfully',
+            data: updatedFoodPause
+        });
+
+    } catch (error) {
+        console.error('Error updating food pause:', error);
+        res.status(500).json({ 
+            message: 'Failed to update food service pause',
+            error: error.message 
+        });
+    }
+}));
+
+// Cancel food pause
+foodApp.delete('/cancel-pause/:studentId', expressAsyncHandler(async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        const student = await StudentModel.findOne({ rollNumber: studentId });
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        const deletedPause = await FoodPause.findOneAndDelete({ student_id: student._id });
+        
+        if (!deletedPause) {
+            return res.status(404).json({ message: 'No pause found to cancel' });
+        }
+
+        res.status(200).json({
+            message: 'Food pause cancelled successfully'
+        });
+
+    } catch (error) {
+        console.error('Error cancelling food pause:', error);
+        res.status(500).json({ 
+            message: 'Failed to cancel food pause',
+            error: error.message 
+        });
+    }
+}));
+
 // Get weekly food menu for students
 foodApp.get('/student/menu/week', expressAsyncHandler(async (req, res) => {
     try {
@@ -428,54 +553,67 @@ foodApp.post('/student/feedback', expressAsyncHandler(async (req, res) => {
 
 // Note: Student feedback history endpoint removed since feedback is now anonymous
 
-// Get weekly menu for students with date-based structure
+// Get weekly menu for students with date-based structure (next 7 days from today)
 foodApp.get('/student/menu/weekly-schedule', expressAsyncHandler(async (req, res) => {
     try {
-        const { WeeklyFoodMenu } = require('../models/FoodModel');
-        
-        // Get current date info
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        
-        // Fetch all weeks for current month
-        const weeklyMenus = await WeeklyFoodMenu.find({
-            month: currentMonth,
-            year: currentYear
-        }).sort({ week: 1 });
-        
-        if (!weeklyMenus.length) {
-            return res.status(404).json({ message: "No menu found for current month" });
-        }
-        
-        // Convert weekly menu to daily schedule format
-        const schedule = [];
+        // Get next 7 days starting from today
         const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
         
-        // Generate dates for current month
-        for (let day = 1; day <= 31; day++) {
-            const date = new Date(currentYear, currentMonth - 1, day);
-            if (date.getMonth() !== currentMonth - 1) break; // Stop if we've moved to next month
+        // Calculate 7 days from today
+        const endDate = new Date(today);
+        endDate.setDate(today.getDate() + 6); // 6 days ahead (today + 6 = 7 days total)
+        const endDateStr = endDate.toISOString().split('T')[0];
+        
+        console.log(`Fetching menus from ${todayStr} to ${endDateStr}`);
+        
+        // Find all menus where date is between today and next 6 days
+        const menus = await FoodMenu.aggregate([
+            {
+                $addFields: {
+                    dateStr: { $dateToString: { format: "%Y-%m-%d", date: "$date", timezone: "UTC" } }
+                }
+            },
+            {
+                $match: {
+                    dateStr: { $gte: todayStr, $lte: endDateStr }
+                }
+            },
+            { $sort: { date: 1 } }
+        ]);
+        
+        console.log(`Found ${menus.length} menus for the next 7 days`);
+        
+        // Create a complete schedule array with all 7 days (fill missing days with empty menus)
+        const schedule = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
             
-            const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-            const weekOfMonth = Math.ceil(day / 7);
-            const adjustedWeek = Math.min(weekOfMonth, 4); // Cap at week 4
+            // Find menu for this date
+            const menu = menus.find(m => m.dateStr === dateStr);
             
-            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            const dayName = dayNames[dayOfWeek];
-            
-            // Find the appropriate week menu
-            const weekMenu = weeklyMenus.find(w => w.week === adjustedWeek);
-            
-            if (weekMenu && weekMenu.days[dayName]) {
-                const dayMenu = weekMenu.days[dayName];
+            if (menu) {
                 schedule.push({
-                    date: date.toISOString().split('T')[0],
+                    date: dateStr,
+                    dateStr: dateStr,
                     weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    breakfast: dayMenu.breakfast || '',
-                    lunch: dayMenu.lunch || '',
-                    snacks: dayMenu.snacks || '',
-                    dinner: dayMenu.dinner || ''
+                    breakfast: menu.breakfast || '',
+                    lunch: menu.lunch || '',
+                    snacks: menu.snacks || '',
+                    dinner: menu.dinner || ''
+                });
+            } else {
+                // Add empty menu for missing dates
+                schedule.push({
+                    date: dateStr,
+                    dateStr: dateStr,
+                    weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
+                    breakfast: '',
+                    lunch: '',
+                    snacks: '',
+                    dinner: ''
                 });
             }
         }
@@ -645,9 +783,13 @@ foodApp.put('/menu/day', updateDayMenu);
 foodApp.get('/menu/current-week', getCurrentWeek);
 foodApp.put('/menu/week', updateWeekMenu);
 
-// Analytics routes
+// Analytics endpoints
 foodApp.get('/analytics/dashboard-data', verifyAdmin, getDashboardData);
 foodApp.get('/analytics/export-data', verifyAdmin, getExportData);
+
+// Enhanced food pause management
+const foodEnhancedRoutes = require('./foodAPIEnhanced');
+foodApp.use('/enhanced', foodEnhancedRoutes);
 
 // Debug endpoint to check food pause data
 foodApp.get('/debug/food-pauses', verifyAdmin, expressAsyncHandler(async (req, res) => {
@@ -658,6 +800,49 @@ foodApp.get('/debug/food-pauses', verifyAdmin, expressAsyncHandler(async (req, r
             total: count,
             sample: pauses,
             message: `Found ${count} food pause records`
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Debug endpoint to check food menus
+foodApp.get('/debug/food-menus', expressAsyncHandler(async (req, res) => {
+    try {
+        const { FoodMenu } = require('../models/FoodModel');
+        const menus = await FoodMenu.find().sort({ date: -1 }).limit(10);
+        const count = await FoodMenu.countDocuments();
+        
+        const today = new Date().toISOString().split('T')[0];
+        const todayMenu = await FoodMenu.findOne({
+            $expr: {
+                $eq: [
+                    { $dateToString: { format: "%Y-%m-%d", date: "$date", timezone: "UTC" } },
+                    today
+                ]
+            }
+        });
+        
+        res.json({
+            total: count,
+            sample: menus.map(m => ({
+                _id: m._id,
+                date: m.date,
+                dateStr: m.date.toISOString().split('T')[0],
+                breakfast: m.breakfast?.substring(0, 50) + '...',
+                lunch: m.lunch?.substring(0, 50) + '...',
+                dinner: m.dinner?.substring(0, 50) + '...',
+                snacks: m.snacks?.substring(0, 50) + '...'
+            })),
+            todayMenu: todayMenu ? {
+                date: todayMenu.date,
+                dateStr: todayMenu.date.toISOString().split('T')[0],
+                breakfast: todayMenu.breakfast,
+                lunch: todayMenu.lunch,
+                dinner: todayMenu.dinner,
+                snacks: todayMenu.snacks
+            } : null,
+            message: `Found ${count} food menu records`
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

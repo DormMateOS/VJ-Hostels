@@ -70,31 +70,56 @@ const FoodScheduleViewer = () => {
 
     const generateWeekDates = () => {
         const today = new Date();
+        
+        // Generate 7 dates starting from today (next 7 days)
         const dates = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(today);
             d.setDate(today.getDate() + i);
             return d.toISOString().split('T')[0];
         });
         setWeekDates(dates);
+        
+        // Set selected date to today (first date in the array)
         setSelectedDate(dates[0]);
     };
 
     const getMealsForDate = (dateString) => {
         const allMeals = ['breakfast', 'lunch', 'snacks', 'dinner'];
+        
+        // If no pause status, return all meals
         if (!studentStatus?.pause_from) return allMeals;
 
         const { pause_from, resume_from, pause_meals, resume_meals } = studentStatus;
 
+        // Before pause date - all meals available
         if (dateString < pause_from) return allMeals;
-        if (dateString === pause_from) return pause_meals?.split(',') || [];
+        
+        // On pause start date - only show meals that are NOT paused
+        if (dateString === pause_from) {
+            const pausedMealsList = pause_meals?.split(',').map(m => m.trim()) || [];
+            return allMeals.filter(meal => !pausedMealsList.includes(meal));
+        }
+        
+        // Between pause and resume dates - no meals
         if (resume_from && dateString > pause_from && dateString < resume_from) return [];
-        if (resume_from && dateString === resume_from) return resume_meals?.split(',') || [];
+        
+        // On resume date - only show resumed meals
+        if (resume_from && dateString === resume_from) {
+            return resume_meals?.split(',').map(m => m.trim()) || [];
+        }
+        
+        // After resume date - all meals available
         if (resume_from && dateString > resume_from) return allMeals;
-        return [];
+        
+        // If no resume date set and after pause date - no meals (indefinite pause)
+        if (!resume_from && dateString > pause_from) return [];
+        
+        return allMeals;
     };
 
     const getMenuForDate = (dateString) => {
-        return foodSchedule.find(item => item.date === dateString) || null;
+        // foodSchedule contains menu objects with dateStr field matching our date format
+        return foodSchedule.find(item => item.dateStr === dateString || item.date === dateString) || null;
     };
 
     const formatDate = (dateString) => {

@@ -803,7 +803,7 @@ const FoodAnalytics = () => {
                             )}
                         </div>
                     </div>
-                </div>
+}</div>
             )}
         </div>
     );
