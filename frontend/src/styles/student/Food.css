@@ -143,6 +143,11 @@
     .tab-text {
         font-size: 0.8rem;
     }
+    /* Make tabs render two per row on mobile */
+    .tab-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
 }
 
 
