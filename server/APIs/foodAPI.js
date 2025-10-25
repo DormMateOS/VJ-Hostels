@@ -6,6 +6,61 @@ const FoodPause = require('../models/FoodPause');
 const StudentModel = require('../models/StudentModel');
 const { verifyAdmin } = require('../middleware/verifyToken');
 const { getMonthlyMenu, updateDayMenu, getCurrentWeek, updateWeekMenu } = require('../controllers/weeklyMenuController');
+const { getDashboardData, getExportData } = require('../controllers/foodAnalyticsControllerFixed');
+
+// Helper function to get date range based on filter
+const getDateRange = (filter, customStart = null, customEnd = null) => {
+    const now = new Date();
+    let startDate, endDate;
+
+    switch (filter) {
+        case 'today':
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+            break;
+        case 'yesterday':
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
+            break;
+        case 'thisWeek':
+            const dayOfWeek = now.getDay();
+            startDate = new Date(now.getTime() - dayOfWeek * 24 * 60 * 60 * 1000);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+            break;
+        case 'lastWeek':
+            const lastWeekEnd = new Date(now.getTime() - now.getDay() * 24 * 60 * 60 * 1000);
+            lastWeekEnd.setHours(0, 0, 0, 0);
+            endDate = lastWeekEnd;
+            startDate = new Date(lastWeekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+            break;
+        case 'thisMonth':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            break;
+        case 'lastMonth':
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+        case 'thisYear':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            endDate = new Date(now.getFullYear() + 1, 0, 1);
+            break;
+        case 'lastYear':
+            startDate = new Date(now.getFullYear() - 1, 0, 1);
+            endDate = new Date(now.getFullYear(), 0, 1);
+            break;
+        case 'custom':
+            startDate = new Date(customStart);
+            endDate = new Date(customEnd);
+            break;
+        default:
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    }
+
+    return { startDate, endDate };
+};
 
 // Admin API endpoints
 
@@ -85,10 +140,36 @@ foodApp.post('/admin/menu', verifyAdmin, expressAsyncHandler(async (req, res) =>
     }
 }));
 
-// Get all feedback
+// Get all feedback with filtering
 foodApp.get('/admin/feedback', verifyAdmin, expressAsyncHandler(async (req, res) => {
     try {
-        const feedback = await FoodFeedback.find().populate('student_id', 'rollNumber name').sort({ createdAt: -1 });
+        const {
+            dateFilter = 'today',
+            customStartDate,
+            customEndDate,
+            mealType = 'all'
+        } = req.query;
+
+        // Build date filter
+        const { startDate, endDate } = getDateRange(dateFilter, customStartDate, customEndDate);
+        
+        // Build query filter
+        let filter = {
+            date: {
+                $gte: startDate,
+                $lt: endDate
+            }
+        };
+
+        // Add meal type filter if specified
+        if (mealType && mealType !== 'all') {
+            filter.mealType = mealType;
+        }
+
+        const feedback = await FoodFeedback.find(filter)
+            .populate('student_id', 'rollNumber name')
+            .sort({ createdAt: -1 });
+        
         res.status(200).json(feedback);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -460,10 +541,22 @@ foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (r
         // Total number of students
         const totalStudents = await StudentModel.countDocuments();
 
-        // Find students who have paused by checking the FoodPause collection
+        // Find students who have active pauses (paused but not yet resumed)
+        // Convert today's date to YYYY-MM-DD format to match FoodPause model
+        const todayStr = today.toISOString().split('T')[0];
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
         const pausedStudents = await FoodPause.find({
-            pause_from : { $lte: today },
-            resume_from: { $gte: today }
+            $and: [
+                { pause_from: { $lte: todayStr } },
+                {
+                    $or: [
+                        { resume_from: { $exists: false } },
+                        { resume_from: null },
+                        { resume_from: { $gte: todayStr } }
+                    ]
+                }
+            ]
         });
 
         let breakfastPaused = 0;
@@ -474,23 +567,73 @@ foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (r
         const pausedStudentIds = pausedStudents.map(p => p.student_id.toString());
 
         for (const pause of pausedStudents) {
-            if (pause.pause_meals.includes('breakfast')) breakfastPaused++;
-            if (pause.pause_meals.includes('lunch')) lunchPaused++;
-            if (pause.pause_meals.includes('snacks')) snacksPaused++;
-            if (pause.pause_meals.includes('dinner')) dinnerPaused++;
+            // pause_meals is stored as comma-separated string, so split it
+            const pausedMeals = pause.pause_meals ? pause.pause_meals.split(',') : [];
+            
+            if (pausedMeals.includes('breakfast')) breakfastPaused++;
+            if (pausedMeals.includes('lunch')) lunchPaused++;
+            if (pausedMeals.includes('snacks')) snacksPaused++;
+            if (pausedMeals.includes('dinner')) dinnerPaused++;
         }
 
         // Total students taking meals today
         const totalMealsToday = totalStudents - pausedStudentIds.length;
+
+        console.log('=== FOOD STATS DEBUG ===');
+        console.log(`Today: ${todayStr}`);
+        console.log(`Total students: ${totalStudents}`);
+        console.log(`Found ${pausedStudents.length} paused students:`, pausedStudents);
+        console.log('======================');
 
         res.status(200).json({
             totalMealsToday,
             breakfastPaused,
             lunchPaused,
             snacksPaused,
-            dinnerPaused
+            dinnerPaused,
+            debug: {
+                totalStudents,
+                pausedStudentsCount: pausedStudents.length,
+                todayStr,
+                pausedStudents: pausedStudents.map(p => ({
+                    student_id: p.student_id,
+                    pause_from: p.pause_from,
+                    resume_from: p.resume_from,
+                    pause_meals: p.pause_meals
+                }))
+            }
         });
-        console.log(pausedStudents);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Debug endpoint to check food pause records
+foodApp.get('/debug/food-pauses', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const allFoodPauses = await FoodPause.find().populate('student_id', 'rollNumber name');
+        const today = new Date().toISOString().split('T')[0];
+        
+        const activePauses = await FoodPause.find({
+            $and: [
+                { pause_from: { $lte: today } },
+                {
+                    $or: [
+                        { resume_from: { $exists: false } },
+                        { resume_from: null },
+                        { resume_from: { $gte: today } }
+                    ]
+                }
+            ]
+        }).populate('student_id', 'rollNumber name');
+
+        res.status(200).json({
+            total: allFoodPauses.length,
+            active: activePauses.length,
+            today: today,
+            allPauses: allFoodPauses,
+            activePauses: activePauses
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -501,5 +644,24 @@ foodApp.get('/menu/monthly', getMonthlyMenu);
 foodApp.put('/menu/day', updateDayMenu);
 foodApp.get('/menu/current-week', getCurrentWeek);
 foodApp.put('/menu/week', updateWeekMenu);
+
+// Analytics routes
+foodApp.get('/analytics/dashboard-data', verifyAdmin, getDashboardData);
+foodApp.get('/analytics/export-data', verifyAdmin, getExportData);
+
+// Debug endpoint to check food pause data
+foodApp.get('/debug/food-pauses', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const pauses = await FoodPause.find().limit(10).populate('student_id', 'name rollNumber');
+        const count = await FoodPause.countDocuments();
+        res.json({
+            total: count,
+            sample: pauses,
+            message: `Found ${count} food pause records`
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}));
 
 module.exports = foodApp;
