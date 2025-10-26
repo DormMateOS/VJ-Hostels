@@ -190,7 +190,7 @@ const FoodPauseManager = () => {
                 <div className="card-header bg-primary text-white">
                     <h4 className="mb-0">
                         <i className="bi bi-pause-circle me-2"></i>
-                        Food Service Management
+                        
                     </h4>
                 </div>
                 <div className="card-body">

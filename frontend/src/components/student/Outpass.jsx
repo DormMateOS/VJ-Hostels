@@ -1,21 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import useCurrentUser from '../../hooks/student/useCurrentUser';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 function Outpass() {
     const { user, loading } = useCurrentUser();
-    const { register, handleSubmit, formState: { errors }, reset } = useForm();
+    const { register, handleSubmit, control, formState: { errors }, reset } = useForm();
     const navigate = useNavigate();
     const [activePass, setActivePass] = useState(null);
     const [pendingPass, setPendingPass] = useState(null);
     const [checkingActivePass, setCheckingActivePass] = useState(true);
+    const [isMobileView, setIsMobileView] = useState(false);
 
 
     // console.log(user)
 
     useEffect(() => {
+        const handleResize = () => setIsMobileView(window.innerWidth <= 480);
+        handleResize();
+        window.addEventListener('resize', handleResize);
         const checkForActivePass = async () => {
             if (!user?.rollNumber) {
                 setCheckingActivePass(false);
@@ -54,6 +60,7 @@ function Outpass() {
         if (user) {
             checkForActivePass();
         }
+        return () => window.removeEventListener('resize', handleResize);
     }, [user]);
 
     if (loading || checkingActivePass) {
@@ -194,6 +201,9 @@ function Outpass() {
                 month,
                 year
             };
+            // Convert Date objects to ISO strings (server expects datetime strings)
+            if (payload.outTime instanceof Date) payload.outTime = payload.outTime.toISOString();
+            if (payload.inTime instanceof Date) payload.inTime = payload.inTime.toISOString();
 
             console.log('Submitting Payload:', payload);
 
@@ -215,24 +225,66 @@ function Outpass() {
             <h2 className="form-title">Apply for Outpass</h2>
             
             <form onSubmit={handleSubmit(onSubmit)}>
-                <div className="form-group">
-                    <label className="form-label">Out Time</label>
-                    <input
-                        type="datetime-local"
-                        className="form-input"
-                        {...register('outTime', { required: 'Out time is required' })}
-                    />
-                    {errors.outTime && <span className="error-message">{errors.outTime.message}</span>}
-                </div>
+                <div className="form-row two-columns">
+                    <div className="form-group">
+                        <label className="form-label">Out Time</label>
+                        <Controller
+                            control={control}
+                            name="outTime"
+                            rules={{ required: 'Out time is required' }}
+                            render={({ field }) => (
+                                <DatePicker
+                                    placeholderText="Select out date & time"
+                                    selected={field.value ? new Date(field.value) : null}
+                                    onChange={(val) => field.onChange(val)}
+                                    showTimeSelect
+                                    timeIntervals={15}
+                                    timeCaption="Time"
+                                    dateFormat="dd-MM-yyyy h:mm aa"
+                                    className="form-input"
+                                    popperPlacement="bottom"
+                                    popperModifiers={[
+                                        { name: 'offset', options: { offset: [0, 8] } },
+                                        { name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } },
+                                        { name: 'flip', options: { fallbackPlacements: ['top', 'bottom'] } },
+                                        { name: 'computeStyles', options: { adaptive: false } }
+                                    ]}
+                                    withPortal={isMobileView}
+                                />
+                            )}
+                        />
+                        {errors.outTime && <span className="error-message">{errors.outTime.message}</span>}
+                    </div>
 
-                <div className="form-group">
-                    <label className="form-label">In Time</label>
-                    <input
-                        type="datetime-local"
-                        className="form-input"
-                        {...register('inTime', { required: 'In time is required' })}
-                    />
-                    {errors.inTime && <span className="error-message">{errors.inTime.message}</span>}
+                    <div className="form-group">
+                        <label className="form-label">In Time</label>
+                        <Controller
+                            control={control}
+                            name="inTime"
+                            rules={{ required: 'In time is required' }}
+                            render={({ field }) => (
+                                <DatePicker
+                                    placeholderText="Select in date & time"
+                                    selected={field.value ? new Date(field.value) : null}
+                                    onChange={(val) => field.onChange(val)}
+                                    showTimeSelect
+                                    timeIntervals={15}
+                                    timeCaption="Time"
+                                    dateFormat="dd-MM-yyyy h:mm aa"
+                                    className="form-input"
+                                    popperPlacement="bottom"
+                                    popperModifiers={[
+                                        { name: 'offset', options: { offset: [0, 8] } },
+                                        { name: 'preventOverflow', options: { boundary: 'viewport', padding: 8 } },
+                                        { name: 'flip', options: { fallbackPlacements: ['top', 'bottom'] } },
+                                        { name: 'computeStyles', options: { adaptive: false } }
+                                    ]}
+                                    withPortal={isMobileView}
+                                />
+                            )}
+                        />
+                        {errors.inTime && <span className="error-message">{errors.inTime.message}</span>}
+                    </div>
                 </div>
 
                 <div className="form-group">
