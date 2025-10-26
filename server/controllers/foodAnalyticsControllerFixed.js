@@ -12,10 +12,12 @@ const getDateRange = (filter, customStart = null, customEnd = null) => {
     switch (filter) {
         case 'today':
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
             break;
         case 'yesterday':
             endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            endDate.setHours(0, 0, 0, 0);
             startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
             break;
         case 'thisWeek':
@@ -32,28 +34,39 @@ const getDateRange = (filter, customStart = null, customEnd = null) => {
             break;
         case 'thisMonth':
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'lastMonth':
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'thisYear':
             startDate = new Date(now.getFullYear(), 0, 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear() + 1, 0, 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'lastYear':
             startDate = new Date(now.getFullYear() - 1, 0, 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), 0, 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'custom':
             startDate = new Date(customStart);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(customEnd);
-            endDate.setHours(23, 59, 59, 999);
+            endDate.setHours(0, 0, 0, 0);
             break;
         default:
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            endDate.setHours(0, 0, 0, 0);
     }
 
     return {
@@ -64,6 +77,7 @@ const getDateRange = (filter, customStart = null, customEnd = null) => {
 
 // GET /analytics/dashboard-data
 const getDashboardData = asyncHandler(async (req, res) => {
+    console.log('=== DASHBOARD DATA API CALLED ===');
     const {
         dateFilter = 'thisMonth',
         customStartDate,
@@ -74,10 +88,13 @@ const getDashboardData = asyncHandler(async (req, res) => {
         gender
     } = req.query;
 
+    console.log('Query parameters:', { dateFilter, customStartDate, customEndDate, mealTypes, statusFilter, hostelId, gender });
+
     const { startDate, endDate } = getDateRange(dateFilter, customStartDate, customEndDate);
     const mealTypeArray = mealTypes.split(',').filter(Boolean);
 
-    console.log('Analytics API called with:', { dateFilter, startDate, endDate, mealTypes });
+    console.log('Date range:', { startDate, endDate });
+    console.log('Meal type array:', mealTypeArray);
 
     // Build student filter
     let studentFilter = {};
@@ -88,7 +105,7 @@ const getDashboardData = asyncHandler(async (req, res) => {
     const students = await Student.find(studentFilter).select('_id name room');
     const studentIds = students.map(s => s._id);
 
-    console.log(`Found ${students.length} students`);
+    console.log(`Found ${students.length} students matching filters`);
 
     // Build query for food pauses within date range
     const pauseMatchStage = {
@@ -112,12 +129,17 @@ const getDashboardData = asyncHandler(async (req, res) => {
         ]
     };
 
+    console.log('Food pause query filter:', JSON.stringify(pauseMatchStage, null, 2));
+
     // Get pause/resume data
     const pauseData = await FoodPause.find(pauseMatchStage)
         .populate('student_id', 'name room')
         .sort({ createdAt: -1 });
     
     console.log(`Found ${pauseData.length} food pause records`);
+    if (pauseData.length > 0) {
+        console.log('Sample pause data:', JSON.stringify(pauseData[0], null, 2));
+    }
 
     // Get food count data (if available)
     const foodCountData = await FoodCount.find({
@@ -128,6 +150,12 @@ const getDashboardData = asyncHandler(async (req, res) => {
 
     // Process data for analytics
     const processedData = processAnalyticsData(pauseData, foodCountData, mealTypeArray, startDate, endDate);
+
+    console.log('Processed data summary:', {
+        totalPaused: processedData.summary.totalMealsPaused,
+        totalServed: processedData.summary.totalMealsServed,
+        dailyTrendsCount: processedData.trends.daily.length
+    });
 
     res.json({
         success: true,
@@ -181,7 +209,7 @@ const processAnalyticsData = (pauseData, foodCountData, mealTypes, startDate, en
 
     // Initialize weekday counters
     ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(day => {
-        result.distributions.weekdays[day] = { paused: 0, served: 50 }; // Mock served count
+        result.distributions.weekdays[day] = { paused: 0, served: 0 }; // Will be updated during processing
     });
 
     // Process pause data
@@ -189,6 +217,15 @@ const processAnalyticsData = (pauseData, foodCountData, mealTypes, startDate, en
     let totalMealsResumed = 0;
     const mealPauseCounts = {};
     const dailyPauseCounts = {};
+    const weekdayPauseCounts = {
+        'Sunday': { paused: 0, served: 0 },
+        'Monday': { paused: 0, served: 0 },
+        'Tuesday': { paused: 0, served: 0 },
+        'Wednesday': { paused: 0, served: 0 },
+        'Thursday': { paused: 0, served: 0 },
+        'Friday': { paused: 0, served: 0 },
+        'Saturday': { paused: 0, served: 0 }
+    };
 
     pauseData.forEach(pause => {
         // Parse comma-separated meal types
@@ -203,15 +240,28 @@ const processAnalyticsData = (pauseData, foodCountData, mealTypes, startDate, en
             }
         });
 
-        // Count pauses by date
+        // Count pauses by date and weekday
         if (pause.pause_from) {
             dailyPauseCounts[pause.pause_from] = (dailyPauseCounts[pause.pause_from] || 0) + pausedMeals.length;
+            
+            // Also track by weekday
+            const dateObj = new Date(pause.pause_from + 'T00:00:00Z');
+            const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getUTCDay()];
+            weekdayPauseCounts[dayName].paused += pausedMeals.length;
         }
 
         // Count resumed meals
         if (pause.resume_from) {
             const resumedMeals = pause.resume_meals ? pause.resume_meals.split(',') : [];
             totalMealsResumed += resumedMeals.length;
+        }
+    });
+
+    // Update weekday counters with mock served data
+    Object.keys(weekdayPauseCounts).forEach(day => {
+        result.distributions.weekdays[day] = weekdayPauseCounts[day];
+        if (result.distributions.weekdays[day].served === 0) {
+            result.distributions.weekdays[day].served = 50;
         }
     });
 

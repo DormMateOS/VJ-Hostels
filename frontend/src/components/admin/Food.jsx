@@ -95,14 +95,15 @@ const Food = () => {
     // Today's date string
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Compute today's averages and rating distribution, plus recent 7-day trends
+    // Compute filtered period's averages and rating distribution, plus recent 7-day trends
     const {
         todayAvgByMeal,
         todayRatingDistribution,
         totalTodayReviews,
         recentTrendsFromFeedback,
         recentDates,
-        recentByDate
+        recentByDate,
+        filteredDates
     } = (() => {
         // Group reviews by date and meal
         const byDateMeal = {}; // { 'YYYY-MM-DD': { mealType: [ratings] } }
@@ -120,27 +121,85 @@ const Food = () => {
             byDateMeal[dateStr][f.mealType].push(Number(f.rating));
         });
 
-        // Today's averages
-        const todayAvg = {};
-        let totalToday = 0;
+        // Determine which dates to use for statistics based on filter
+        let datesForStats = [todayStr]; // default to today
+        if (feedbackFilters.dateFilter === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            datesForStats = [yesterday.toISOString().split('T')[0]];
+        } else if (feedbackFilters.dateFilter === 'thisWeek') {
+            const d = new Date();
+            const dayOfWeek = d.getDay();
+            datesForStats = [];
+            for (let i = dayOfWeek; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'lastWeek') {
+            const d = new Date();
+            const dayOfWeek = d.getDay();
+            datesForStats = [];
+            for (let i = dayOfWeek + 7; i >= dayOfWeek + 1; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'thisMonth') {
+            const d = new Date();
+            datesForStats = [];
+            for (let i = d.getDate(); i >= 1; i--) {
+                const date = new Date(d.getFullYear(), d.getMonth(), i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'lastMonth') {
+            const d = new Date();
+            const lastMonth = d.getMonth() - 1;
+            const year = lastMonth < 0 ? d.getFullYear() - 1 : d.getFullYear();
+            const month = lastMonth < 0 ? 11 : lastMonth;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            datesForStats = [];
+            for (let i = daysInMonth; i >= 1; i--) {
+                const date = new Date(year, month, i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'custom' && feedbackFilters.customStartDate && feedbackFilters.customEndDate) {
+            const start = new Date(feedbackFilters.customStartDate);
+            const end = new Date(feedbackFilters.customEndDate);
+            datesForStats = [];
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                datesForStats.push(d.toISOString().split('T')[0]);
+                if (datesForStats.length > 0 && datesForStats[datesForStats.length - 1] === end.toISOString().split('T')[0]) break;
+            }
+        }
+
+        // Calculate averages for filtered period
+        const filteredAvg = {};
+        let filteredTotal = 0;
         mealTypes.forEach(mt => {
-            const ratings = (byDateMeal[todayStr] && byDateMeal[todayStr][mt]) || [];
-            const count = ratings.length;
-            totalToday += count;
-            const avg = count ? ratings.reduce((a,b)=>a+b,0)/count : 0;
-            todayAvg[mt] = { averageRating: avg, count };
+            let allRatings = [];
+            datesForStats.forEach(dateStr => {
+                const ratings = (byDateMeal[dateStr] && byDateMeal[dateStr][mt]) || [];
+                allRatings = allRatings.concat(ratings);
+            });
+            const count = allRatings.length;
+            filteredTotal += count;
+            const avg = count ? allRatings.reduce((a,b)=>a+b,0)/count : 0;
+            filteredAvg[mt] = { averageRating: avg, count };
         });
 
-        // Today's rating distribution (1-5)
-        const ratingDist = [0,0,0,0,0]; // indices 0->1star ... 4->5star
-        if (byDateMeal[todayStr]) {
-            Object.values(byDateMeal[todayStr]).forEach(arr => {
-                arr.forEach(r => {
-                    const idx = Math.min(Math.max(Math.round(r) - 1, 0), 4);
-                    ratingDist[idx]++;
+        // Filtered period's rating distribution (1-5)
+        const filteredRatingDist = [0,0,0,0,0]; // indices 0->1star ... 4->5star
+        datesForStats.forEach(dateStr => {
+            if (byDateMeal[dateStr]) {
+                Object.values(byDateMeal[dateStr]).forEach(arr => {
+                    arr.forEach(r => {
+                        const idx = Math.min(Math.max(Math.round(r) - 1, 0), 4);
+                        filteredRatingDist[idx]++;
+                    });
                 });
-            });
-        }
+            }
+        });
 
         // Recent 7 days including today: generate date strings from oldest to newest
         const recentDates = [];
@@ -163,12 +222,13 @@ const Food = () => {
         });
 
         return {
-            todayAvgByMeal: todayAvg,
-            todayRatingDistribution: ratingDist,
-            totalTodayReviews: totalToday,
+            todayAvgByMeal: filteredAvg,
+            todayRatingDistribution: filteredRatingDist,
+            totalTodayReviews: filteredTotal,
             recentTrendsFromFeedback: recentTrends,
             recentDates,
-            recentByDate
+            recentByDate,
+            filteredDates: datesForStats
         };
     })();
 

@@ -23,7 +23,6 @@ const StudentFoodManager = () => {
                     Authorization: `Bearer ${token}`
                 }
             });
-            console.log('Food Stats Response:', response.data);
             setStats(response.data);
             
         } catch (err) {

@@ -379,42 +379,150 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                                                 })}
                                             </div>
 
-                                            <div className="d-flex gap-2 justify-content-center">
+                                            <div className="d-flex gap-4 justify-content-center mb-4">
                                                 <button
-                                                    className="btn btn-outline-primary"
+                                                    className="btn px-5 py-3"
                                                     onClick={() => setSelectedMeals(['breakfast', 'lunch', 'snacks', 'dinner'])}
+                                                    style={{
+                                                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '15px',
+                                                        fontWeight: '700',
+                                                        fontSize: '1.1rem',
+                                                        boxShadow: '0 8px 20px rgba(34, 197, 94, 0.4)',
+                                                        transition: 'all 0.3s ease',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                                                        e.target.style.boxShadow = '0 12px 30px rgba(34, 197, 94, 0.6)';
+                                                        e.target.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.target.style.transform = 'translateY(0) scale(1)';
+                                                        e.target.style.boxShadow = '0 8px 20px rgba(34, 197, 94, 0.4)';
+                                                        e.target.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+                                                    }}
                                                 >
-                                                    Select All Meals
+                                                    <i className="bi bi-check-all me-2" style={{ fontSize: '1.2rem' }}></i>
+                                                    SELECT ALL MEALS
                                                 </button>
                                                 <button
-                                                    className="btn btn-outline-secondary"
+                                                    className="btn px-5 py-3"
                                                     onClick={() => setSelectedMeals([])}
+                                                    style={{
+                                                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '15px',
+                                                        fontWeight: '700',
+                                                        fontSize: '1.1rem',
+                                                        boxShadow: '0 8px 20px rgba(239, 68, 68, 0.4)',
+                                                        transition: 'all 0.3s ease',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.target.style.transform = 'translateY(-3px) scale(1.05)';
+                                                        e.target.style.boxShadow = '0 12px 30px rgba(239, 68, 68, 0.6)';
+                                                        e.target.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.target.style.transform = 'translateY(0) scale(1)';
+                                                        e.target.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.4)';
+                                                        e.target.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                                                    }}
                                                 >
-                                                    Clear Selection
+                                                    <i className="bi bi-x-square me-2" style={{ fontSize: '1.2rem' }}></i>
+                                                    CLEAR ALL
                                                 </button>
                                             </div>
 
-                                            <div className="mt-4 text-center">
+                                            <div className="mt-5 text-center">
                                                 <button
-                                                    className="btn btn-primary btn-lg me-3"
+                                                    className="btn me-4"
                                                     onClick={handleSubmit}
                                                     disabled={submitting || selectedMeals.length === 0}
+                                                    style={{
+                                                        background: selectedMeals.length === 0 
+                                                            ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' 
+                                                            : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '20px',
+                                                        fontWeight: '800',
+                                                        fontSize: '1.3rem',
+                                                        padding: '15px 40px',
+                                                        boxShadow: selectedMeals.length === 0 
+                                                            ? '0 10px 25px rgba(156, 163, 175, 0.4)' 
+                                                            : '0 10px 25px rgba(139, 92, 246, 0.5)',
+                                                        transition: 'all 0.4s ease',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '1px',
+                                                        cursor: selectedMeals.length === 0 ? 'not-allowed' : 'pointer'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        if (!e.target.disabled && selectedMeals.length > 0) {
+                                                            e.target.style.transform = 'translateY(-5px) scale(1.08)';
+                                                            e.target.style.boxShadow = '0 15px 35px rgba(139, 92, 246, 0.7)';
+                                                            e.target.style.background = 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)';
+                                                        }
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        if (!e.target.disabled) {
+                                                            e.target.style.transform = 'translateY(0) scale(1)';
+                                                            e.target.style.boxShadow = selectedMeals.length === 0 
+                                                                ? '0 10px 25px rgba(156, 163, 175, 0.4)' 
+                                                                : '0 10px 25px rgba(139, 92, 246, 0.5)';
+                                                            e.target.style.background = selectedMeals.length === 0 
+                                                                ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)' 
+                                                                : 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+                                                        }
+                                                    }}
                                                 >
                                                     {submitting ? (
                                                         <>
-                                                            <span className="spinner-border spinner-border-sm me-2"></span>
-                                                            Creating Pause...
+                                                            <span className="spinner-border spinner-border-sm me-3" role="status" aria-hidden="true"></span>
+                                                            PROCESSING...
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <i className="bi bi-check-circle me-2"></i>
-                                                            Pause Selected Meals
+                                                            <i className="bi bi-pause-fill me-3" style={{ fontSize: '1.4rem' }}></i>
+                                                            PAUSE MEALS
                                                         </>
                                                     )}
                                                 </button>
-                                                <button className="btn btn-outline-secondary btn-lg" onClick={resetForm}>
-                                                    <i className="bi bi-x-circle me-2"></i>
-                                                    Cancel
+                                                <button 
+                                                    className="btn" 
+                                                    onClick={resetForm}
+                                                    style={{
+                                                        background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                                                        color: 'white',
+                                                        border: 'none',
+                                                        borderRadius: '20px',
+                                                        fontWeight: '800',
+                                                        fontSize: '1.3rem',
+                                                        padding: '15px 40px',
+                                                        boxShadow: '0 10px 25px rgba(249, 115, 22, 0.5)',
+                                                        transition: 'all 0.4s ease',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '1px'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.target.style.transform = 'translateY(-5px) scale(1.08)';
+                                                        e.target.style.boxShadow = '0 15px 35px rgba(249, 115, 22, 0.7)';
+                                                        e.target.style.background = 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.target.style.transform = 'translateY(0) scale(1)';
+                                                        e.target.style.boxShadow = '0 10px 25px rgba(249, 115, 22, 0.5)';
+                                                        e.target.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+                                                    }}
+                                                >
+                                                    <i className="bi bi-x-circle me-3" style={{ fontSize: '1.4rem' }}></i>
+                                                    CANCEL
                                                 </button>
                                             </div>
                                         </div>

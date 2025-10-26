@@ -6,7 +6,7 @@ const { calculateAndUpdateFoodCount } = require('../controllers/foodCountControl
 const { googleOAuth, getStudentsByHostel } = require('../controllers/studentFoodController');
 const { wardenLogin, wardenLoginUsingBcrypt } = require('../controllers/wardenFoodController');
 const { getMonthlyMenu, updateDayMenu, getCurrentWeek, updateWeekMenu } = require('../controllers/weeklyMenuController');
-const { getDashboardData, getExportData } = require('../controllers/foodAnalyticsController');
+const { getDashboardData, getExportData } = require('../controllers/foodAnalyticsControllerFixed');
 
 // Food pause/resume routes
 router.post('/pause', pauseFood);

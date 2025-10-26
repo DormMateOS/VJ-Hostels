@@ -16,10 +16,12 @@ const getDateRange = (filter, customStart = null, customEnd = null) => {
     switch (filter) {
         case 'today':
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
             break;
         case 'yesterday':
             endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            endDate.setHours(0, 0, 0, 0);
             startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
             break;
         case 'thisWeek':
@@ -36,27 +38,39 @@ const getDateRange = (filter, customStart = null, customEnd = null) => {
             break;
         case 'thisMonth':
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'lastMonth':
             startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'thisYear':
             startDate = new Date(now.getFullYear(), 0, 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear() + 1, 0, 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'lastYear':
             startDate = new Date(now.getFullYear() - 1, 0, 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), 0, 1);
+            endDate.setHours(0, 0, 0, 0);
             break;
         case 'custom':
             startDate = new Date(customStart);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(customEnd);
+            endDate.setHours(0, 0, 0, 0);
             break;
         default:
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            startDate.setHours(0, 0, 0, 0);
             endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+            endDate.setHours(0, 0, 0, 0);
     }
 
     return { startDate, endDate };
@@ -565,7 +579,7 @@ foodApp.get('/student/menu/weekly-schedule', expressAsyncHandler(async (req, res
         endDate.setDate(today.getDate() + 6); // 6 days ahead (today + 6 = 7 days total)
         const endDateStr = endDate.toISOString().split('T')[0];
         
-        console.log(`Fetching menus from ${todayStr} to ${endDateStr}`);
+        console.log(`[WEEKLY SCHEDULE] Fetching menus from ${todayStr} to ${endDateStr}`);
         
         // Find all menus where date is between today and next 6 days
         const menus = await FoodMenu.aggregate([
@@ -582,10 +596,17 @@ foodApp.get('/student/menu/weekly-schedule', expressAsyncHandler(async (req, res
             { $sort: { date: 1 } }
         ]);
         
-        console.log(`Found ${menus.length} menus for the next 7 days`);
+        console.log(`[WEEKLY SCHEDULE] Found ${menus.length} menus for the next 7 days:`, menus.map(m => ({ date: m.dateStr, hasBreakfast: !!m.breakfast, hasLunch: !!m.lunch, hasDinner: !!m.dinner, hasSnacks: !!m.snacks })));
         
-        // Create a complete schedule array with all 7 days (fill missing days with empty menus)
+        // Create a complete schedule array with all 7 days (fill missing days with sample menus)
         const schedule = [];
+        const sampleMenus = {
+            breakfast: 'Bread, Butter, Jam',
+            lunch: 'Rice, Dal Fry, Salad',
+            snacks: 'Fruit Salad, Tea',
+            dinner: 'Chapati, Veg Korma, Curd'
+        };
+        
         for (let i = 0; i < 7; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
@@ -599,28 +620,100 @@ foodApp.get('/student/menu/weekly-schedule', expressAsyncHandler(async (req, res
                     date: dateStr,
                     dateStr: dateStr,
                     weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    breakfast: menu.breakfast || '',
-                    lunch: menu.lunch || '',
-                    snacks: menu.snacks || '',
-                    dinner: menu.dinner || ''
+                    breakfast: menu.breakfast || sampleMenus.breakfast,
+                    lunch: menu.lunch || sampleMenus.lunch,
+                    snacks: menu.snacks || sampleMenus.snacks,
+                    dinner: menu.dinner || sampleMenus.dinner
                 });
             } else {
-                // Add empty menu for missing dates
+                // Add sample menu for missing dates
                 schedule.push({
                     date: dateStr,
                     dateStr: dateStr,
                     weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
-                    breakfast: '',
-                    lunch: '',
-                    snacks: '',
-                    dinner: ''
+                    breakfast: sampleMenus.breakfast,
+                    lunch: sampleMenus.lunch,
+                    snacks: sampleMenus.snacks,
+                    dinner: sampleMenus.dinner
                 });
             }
         }
         
+        console.log(`[WEEKLY SCHEDULE] Returning schedule with ${schedule.length} days`);
         res.status(200).json(schedule);
     } catch (error) {
         console.error('Error fetching weekly schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Get weekly schedule from WeeklyFoodMenu model (the working version)
+foodApp.get('/student/menu/weekly-schedule-structured', expressAsyncHandler(async (req, res) => {
+    try {
+        const { WeeklyFoodMenu } = require('../models/FoodModel');
+        
+        const today = new Date();
+        const currentMonth = today.getMonth() + 1;
+        const currentYear = today.getFullYear();
+        const dayOfMonth = today.getDate();
+        
+        // Calculate which week of the month we're in
+        const weekOfMonth = Math.ceil(dayOfMonth / 7);
+        const currentWeek = Math.min(weekOfMonth, 4);
+        
+        console.log(`[WEEKLY SCHEDULE STRUCTURED] Fetching for month: ${currentMonth}, year: ${currentYear}, week: ${currentWeek}`);
+        
+        // Get the current week's menu
+        const weekMenu = await WeeklyFoodMenu.findOne({
+            month: currentMonth,
+            year: currentYear,
+            week: currentWeek
+        });
+        
+        console.log(`[WEEKLY SCHEDULE STRUCTURED] Found week menu:`, weekMenu ? 'Yes' : 'No');
+        
+        // Generate next 7 days starting from today
+        const schedule = [];
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayOfWeek = date.getDay();
+            const dayName = dayNames[dayOfWeek];
+            
+            let dayMenuData = {
+                breakfast: 'Bread, Butter, Jam',
+                lunch: 'Rice, Dal Fry, Salad', 
+                snacks: 'Fruit Salad, Tea',
+                dinner: 'Chapati, Veg Korma, Curd'
+            };
+            
+            // If we have week menu data, use it
+            if (weekMenu && weekMenu.days && weekMenu.days[dayName]) {
+                const menuDay = weekMenu.days[dayName];
+                dayMenuData = {
+                    breakfast: menuDay.breakfast || dayMenuData.breakfast,
+                    lunch: menuDay.lunch || dayMenuData.lunch,
+                    snacks: menuDay.snacks || dayMenuData.snacks,
+                    dinner: menuDay.dinner || dayMenuData.dinner
+                };
+            }
+            
+            schedule.push({
+                date: dateStr,
+                dateStr: dateStr,
+                weekday: date.toLocaleDateString('en-US', { weekday: 'long' }),
+                ...dayMenuData
+            });
+        }
+        
+        console.log(`[WEEKLY SCHEDULE STRUCTURED] Returning ${schedule.length} days of schedule`);
+        res.status(200).json(schedule);
+        
+    } catch (error) {
+        console.error('Error fetching structured weekly schedule:', error);
         res.status(500).json({ error: error.message });
     }
 }));
@@ -796,10 +889,27 @@ foodApp.get('/debug/food-pauses', verifyAdmin, expressAsyncHandler(async (req, r
     try {
         const pauses = await FoodPause.find().limit(10).populate('student_id', 'name rollNumber');
         const count = await FoodPause.countDocuments();
+        
+        // Count by date range
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const monthStartStr = monthStart.toISOString().split('T')[0];
+        const monthEndStr = monthEnd.toISOString().split('T')[0];
+        
+        const thisMonthCount = await FoodPause.countDocuments({
+            $or: [
+                { pause_from: { $gte: monthStartStr, $lte: monthEndStr } },
+                { resume_from: { $gte: monthStartStr, $lte: monthEndStr } }
+            ]
+        });
+        
         res.json({
             total: count,
+            thisMonth: thisMonthCount,
+            monthRange: { start: monthStartStr, end: monthEndStr },
             sample: pauses,
-            message: `Found ${count} food pause records`
+            message: `Found ${count} total pause records (${thisMonthCount} in current month)`
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -845,6 +955,57 @@ foodApp.get('/debug/food-menus', expressAsyncHandler(async (req, res) => {
             message: `Found ${count} food menu records`
         });
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// Test endpoint to quickly create sample food pause data
+foodApp.post('/debug/create-test-data', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        console.log('[Test Data] Creating sample FoodPause records for testing');
+        
+        // Get first 5 students
+        const students = await StudentModel.find().limit(5);
+        if (students.length === 0) {
+            return res.status(400).json({ error: 'No students found in database' });
+        }
+        
+        const testPauses = [];
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+        
+        // Create pauses for Oct 1-15
+        for (let day = 1; day <= 15; day++) {
+            const date = new Date(year, month, day);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            // Create 2-3 pauses per day for different students
+            for (let i = 0; i < Math.min(3, students.length); i++) {
+                testPauses.push({
+                    student_id: students[i]._id,
+                    pause_from: dateStr,
+                    pause_meals: i % 2 === 0 ? 'breakfast,lunch' : 'lunch,snacks',
+                    resume_from: day < 14 ? new Date(year, month, day + 1).toISOString().split('T')[0] : null,
+                    resume_meals: day < 14 ? (i % 2 === 0 ? 'breakfast,lunch' : 'lunch,snacks') : null
+                });
+            }
+        }
+        
+        const result = await FoodPause.insertMany(testPauses);
+        console.log(`[Test Data] ✓ Inserted ${result.length} test records`);
+        
+        res.json({
+            success: true,
+            message: `Created ${result.length} test FoodPause records for Oct 1-15`,
+            inserted: result.length,
+            dateRange: {
+                start: new Date(year, month, 1).toISOString().split('T')[0],
+                end: new Date(year, month, 15).toISOString().split('T')[0]
+            }
+        });
+    } catch (error) {
+        console.error('[Test Data] Error:', error);
         res.status(500).json({ error: error.message });
     }
 }));
