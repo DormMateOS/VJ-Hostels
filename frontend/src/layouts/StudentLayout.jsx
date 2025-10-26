@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, LogOut } from 'lucide-react'
 import Navbar from '../components/student/Navbar'
 import AnnouncementBanner from '../components/student/AnnouncementBanner'
 import useCurrentUser from '../hooks/student/useCurrentUser'
@@ -15,7 +15,8 @@ function StudentLayout() {
   const { clearUser } = useCurrentUser()
   const { logout } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  // Initialize isMobile from the current window size so mobile UI is correct on first render
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false)
 
   const isAnnouncementsPage = location.pathname.includes('/announcements')
 
@@ -126,25 +127,30 @@ function StudentLayout() {
             </div>
           )}
 
-          {/* Logout Button */}
+          {/* Compact Logout Icon Button */}
           <button
+            aria-label="Logout"
+            title="Logout"
+            onClick={handleLogout}
             style={{
               backgroundColor: 'white',
               color: '#800000',
-              fontWeight: '600',
-              padding: '0.5rem 1rem',
-              borderRadius: '0.5rem',
+              padding: '0.25rem',
+              width: '36px',
+              height: '36px',
+              borderRadius: '999px',
               boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
               border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'background-color 0.15s ease-in-out'
+              transition: 'background-color 0.15s ease-in-out, transform 0.08s ease'
             }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#f3e8e8'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-            onClick={handleLogout}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f3e8e8'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white'; e.currentTarget.style.transform = 'none'; }}
           >
-            Logout
+            <LogOut size={16} />
           </button>
         </div>
       </nav>
@@ -158,7 +164,7 @@ function StudentLayout() {
               top: 0,
               left: 0,
               height: '100vh',
-              width: 'min(320px, 80%)',
+              width: 'min(320px, 75%)',
               backgroundColor: '#800000',
               color: 'white',
               boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.1)',
@@ -178,12 +184,13 @@ function StudentLayout() {
               borderBottom: '1px solid #990000',
               backgroundColor: '#660000'
             }}>
-              <h2 style={{
-                fontWeight: 'bold',
-                fontSize: '1.125rem',
-                margin: 0,
-                color: 'white'
-              }}>Student Portal</h2>
+              <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                <img src={logo} alt="VJ Hostels" style={{ height: '42px', width: 'auto' }} />
+                <div style={{color: 'white'}}>
+                  <div style={{fontWeight: '700', fontSize: '0.95rem', lineHeight: 1}}>VNRVJIET</div>
+                  <div style={{fontSize: '0.72rem', opacity: 0.9}}>Student Portal</div>
+                </div>
+              </div>
               <button 
                 onClick={toggleSidebar}
                 style={{
