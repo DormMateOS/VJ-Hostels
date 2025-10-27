@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAdmin } from '../../context/AdminContext';
 import {
@@ -15,6 +15,9 @@ import {
     Filler
 } from 'chart.js';
 import { Bar, Pie, Line, Doughnut } from 'react-chartjs-2';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import PptxGenJs from 'pptxgenjs';
 
 // Register ChartJS components
 ChartJS.register(
@@ -39,6 +42,16 @@ const FoodAnalytics = () => {
         customStartDate: '',
         customEndDate: '',
         mealTypes: 'all'
+    });
+
+    // Refs for capturing chart images
+    const dashboardRef = useRef(null);
+    const chartsRefs = useRef({
+        trendChart: null,
+        mealTypeChart: null,
+        weekdayChart: null,
+        pausePercentageChart: null,
+        weekdayMealChart: null
     });
 
     const getDefaultAnalyticsData = () => ({
@@ -179,27 +192,233 @@ const FoodAnalytics = () => {
         });
     };
 
-    const handleExportPDF = () => {
-        console.log('[Export] PDF export requested');
-        console.log('[Export] Current analytics data:', analyticsData);
-        if (analyticsData) {
-            console.log('[Export] ✓ Data available for PDF export');
-            alert('PDF Export feature - Check console for data');
-        } else {
-            console.warn('[Export] ✗ No analytics data available for PDF');
+    const handleExportPDF = async () => {
+        console.log('[PDF Export] Starting PDF export...');
+        try {
+            const element = dashboardRef.current;
+            if (!element) {
+                alert('Dashboard content not found');
+                return;
+            }
+
+            // Create canvas from dashboard
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+            });
+
+            // Create PDF
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const imgWidth = 297; // A4 width in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            let heightLeft = imgHeight;
+
+            let position = 0;
+
+            // Add title page
+            pdf.setFontSize(24);
+            pdf.text('Food Management Analytics Report', 15, 30);
+            pdf.setFontSize(12);
+            pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, 50);
+            pdf.text(`Filters: ${filters.dateFilter} | Meals: ${filters.mealTypes}`, 15, 60);
+
+            // Add content pages
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= 280;
+
+            while (heightLeft >= 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= 280;
+            }
+
+            pdf.save(`Analytics_Report_${new Date().getTime()}.pdf`);
+            console.log('[PDF Export] ✓ PDF exported successfully');
+            alert('PDF exported successfully!');
+        } catch (error) {
+            console.error('[PDF Export] Error:', error);
+            alert('Error exporting PDF: ' + error.message);
         }
     };
 
-    const handleExportCSV = (type) => {
-        console.log(`[Export] CSV export requested for type: ${type}`);
-        if (!analyticsData) {
-            console.warn('[Export] ✗ No analytics data available for CSV export');
-            return;
+    const handleExportPowerPoint = async () => {
+        console.log('[PPT Export] Starting PowerPoint export...');
+        try {
+            const pres = new PptxGenJs();
+            pres.defineLayout({ name: 'LAYOUT1', width: 10, height: 7.5 });
+
+            // Slide 1: Title Slide
+            let slide = pres.addSlide();
+            slide.background = { color: '1F4788' };
+            slide.addText('Food Management Analytics Report', {
+                x: 0.5,
+                y: 2.5,
+                w: 9,
+                h: 1,
+                fontSize: 44,
+                bold: true,
+                color: 'FFFFFF',
+                align: 'center'
+            });
+            slide.addText(`Generated on ${new Date().toLocaleDateString()}`, {
+                x: 0.5,
+                y: 3.8,
+                w: 9,
+                h: 0.5,
+                fontSize: 18,
+                color: 'E0E0E0',
+                align: 'center'
+            });
+
+            // Slide 2: Summary Metrics
+            slide = pres.addSlide();
+            slide.background = { color: 'F5F5F5' };
+            slide.addText('Summary Metrics', {
+                x: 0.5,
+                y: 0.3,
+                w: 9,
+                h: 0.4,
+                fontSize: 32,
+                bold: true,
+                color: '1F4788'
+            });
+
+            const metrics = [
+                { label: 'Total Served', value: analyticsData?.summary?.totalMealsServed || 0, color: '4472C4' },
+                { label: 'Total Paused', value: analyticsData?.summary?.totalMealsPaused || 0, color: 'FFC000' },
+                { label: 'Total Resumed', value: analyticsData?.summary?.totalMealsResumed || 0, color: '70AD47' },
+                { label: 'Pause Rate', value: (analyticsData?.summary?.pausePercentage?.toFixed(1) || 0) + '%', color: '17A2B8' }
+            ];
+
+            let yPos = 1.2;
+            metrics.forEach((metric, idx) => {
+                const xPos = (idx % 2) * 4.5 + 0.5;
+                const yPosition = yPos + Math.floor(idx / 2) * 2;
+
+                // Box background
+                slide.addShape(pres.ShapeType.rect, {
+                    x: xPos,
+                    y: yPosition,
+                    w: 4,
+                    h: 1.5,
+                    fill: { color: metric.color },
+                    line: { color: metric.color }
+                });
+
+                // Label
+                slide.addText(metric.label, {
+                    x: xPos + 0.2,
+                    y: yPosition + 0.2,
+                    w: 3.6,
+                    h: 0.4,
+                    fontSize: 14,
+                    bold: true,
+                    color: 'FFFFFF'
+                });
+
+                // Value
+                slide.addText(metric.value.toString(), {
+                    x: xPos + 0.2,
+                    y: yPosition + 0.7,
+                    w: 3.6,
+                    h: 0.6,
+                    fontSize: 28,
+                    bold: true,
+                    color: 'FFFFFF',
+                    align: 'center'
+                });
+            });
+
+            // Slide 3: Meal Distribution
+            slide = pres.addSlide();
+            slide.background = { color: 'F5F5F5' };
+            slide.addText('Meal Distribution Details', {
+                x: 0.5,
+                y: 0.3,
+                w: 9,
+                h: 0.4,
+                fontSize: 32,
+                bold: true,
+                color: '1F4788'
+            });
+
+            // Create table for meal distribution
+            const mealData = [];
+            mealData.push(['Meal Type', 'Total', 'Paused', 'Served', 'Pause Rate %']);
+            
+            Object.entries(analyticsData?.distributions?.mealTypes || {}).forEach(([meal, data]) => {
+                const total = (data.paused || 0) + (data.served || 0);
+                const pauseRate = total > 0 ? ((data.paused || 0) / total * 100).toFixed(1) : 0;
+                mealData.push([
+                    meal.charAt(0).toUpperCase() + meal.slice(1),
+                    total.toString(),
+                    (data.paused || 0).toString(),
+                    (data.served || 0).toString(),
+                    pauseRate + '%'
+                ]);
+            });
+
+            slide.addTable(mealData, {
+                x: 0.5,
+                y: 1,
+                w: 9,
+                h: 5,
+                colW: [2, 1.5, 1.5, 1.5, 1.5],
+                border: { pt: 1, color: '1F4788' },
+                fill: { color: 'E8F0F8' },
+                fontSize: 12,
+                align: 'center',
+                valign: 'middle'
+            });
+
+            // Slide 4: Insights
+            if (analyticsData?.insights && analyticsData.insights.length > 0) {
+                slide = pres.addSlide();
+                slide.background = { color: 'F5F5F5' };
+                slide.addText('Automated Insights', {
+                    x: 0.5,
+                    y: 0.3,
+                    w: 9,
+                    h: 0.4,
+                    fontSize: 32,
+                    bold: true,
+                    color: '1F4788'
+                });
+
+                let insightY = 1.2;
+                analyticsData.insights.slice(0, 6).forEach((insight, idx) => {
+                    slide.addText(`• ${insight}`, {
+                        x: 0.7,
+                        y: insightY,
+                        w: 8.6,
+                        h: 0.8,
+                        fontSize: 11,
+                        color: '333333',
+                        valign: 'top',
+                        wordWrap: true
+                    });
+                    insightY += 0.9;
+                });
+            }
+
+            // Save presentation
+            pres.save(`Analytics_Report_${new Date().getTime()}.pptx`);
+            console.log('[PPT Export] ✓ PowerPoint exported successfully');
+            alert('PowerPoint exported successfully!');
+        } catch (error) {
+            console.error('[PPT Export] Error:', error);
+            alert('Error exporting PowerPoint: ' + error.message);
         }
-        
-        console.log('[Export] ✓ Data available for CSV export');
-        console.log('[Export] Exporting data:', analyticsData);
-        alert(`${type} CSV Export feature - Check console for data`);
     };
 
     if (loading) {
@@ -295,29 +514,10 @@ const FoodAnalytics = () => {
                             </button>
                             <button
                                 className="btn btn-info"
-                                onClick={() => handleExportCSV('daily')}
+                                onClick={handleExportPowerPoint}
                             >
-                                <i className="bi bi-file-csv me-2"></i>
-                                Export CSV
-                            </button>
-                            <button
-                                className="btn btn-warning"
-                                onClick={async () => {
-                                    try {
-                                        const response = await axios.get(
-                                            `${import.meta.env.VITE_SERVER_URL}/food-api/debug/food-pauses`,
-                                            { headers: { Authorization: `Bearer ${token}` } }
-                                        );
-                                        console.log('Debug Food Pauses:', response.data);
-                                        alert(`Found ${response.data.total} food pause records. Check console for details.`);
-                                    } catch (error) {
-                                        console.error('Debug error:', error);
-                                        alert('Error fetching debug data');
-                                    }
-                                }}
-                            >
-                                <i className="bi bi-bug me-2"></i>
-                                Debug
+                                <i className="bi bi-file-ppt me-2"></i>
+                                Export PPT
                             </button>
                         </div>
                     </div>
@@ -569,7 +769,152 @@ const FoodAnalytics = () => {
                         </div>
                     </div>
 
-                    {/* Daily Trends Table */}
+                    {/* Pause Percentage by Meal Type - Pie Chart */}
+                    <div className="row mb-4">
+                        <div className="col-md-6">
+                            <div className="card h-100">
+                                <div className="card-header bg-light">
+                                    <h5 className="mb-0">Pause Percentage by Meal Type</h5>
+                                </div>
+                                <div className="card-body">
+                                    <div style={{ height: '300px' }}>
+                                        <Pie
+                                            data={{
+                                                labels: Object.keys(data.distributions?.mealTypes || {}).map(meal => meal.charAt(0).toUpperCase() + meal.slice(1)),
+                                                datasets: [{
+                                                    label: 'Pause Percentage',
+                                                    data: Object.values(data.distributions?.mealTypes || {}).map(meal => {
+                                                        const total = (meal.paused || 0) + (meal.served || 0);
+                                                        return total > 0 ? ((meal.paused || 0) / total * 100) : 0;
+                                                    }),
+                                                    backgroundColor: [
+                                                        '#FF6384',
+                                                        '#36A2EB',
+                                                        '#FFCE56',
+                                                        '#4BC0C0'
+                                                    ],
+                                                    borderColor: [
+                                                        '#FF6384',
+                                                        '#36A2EB',
+                                                        '#FFCE56',
+                                                        '#4BC0C0'
+                                                    ],
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'bottom',
+                                                    },
+                                                    title: {
+                                                        display: true,
+                                                        text: 'Pause Rates for Each Meal Type (%)'
+                                                    },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function(context) {
+                                                                return context.label + ': ' + context.parsed + '%';
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Paused Meals by Weekday and Meal Type - Grouped Bar Chart */}
+                        <div className="col-md-6">
+                            <div className="card h-100">
+                                <div className="card-header bg-light">
+                                    <h5 className="mb-0">Paused Meals by Weekday & Type</h5>
+                                </div>
+                                <div className="card-body">
+                                    <div style={{ height: '300px' }}>
+                                        <Bar
+                                            data={{
+                                                labels: Object.keys(data.distributions?.weekdays || {}),
+                                                datasets: [
+                                                    {
+                                                        label: 'Breakfast Paused',
+                                                        data: Object.values(data.distributions?.weekdays || {}).map(weekday => 
+                                                            weekday.mealBreakdown?.breakfast || 0
+                                                        ),
+                                                        backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                                                        borderColor: '#FF6384',
+                                                        borderWidth: 1
+                                                    },
+                                                    {
+                                                        label: 'Lunch Paused',
+                                                        data: Object.values(data.distributions?.weekdays || {}).map(weekday => 
+                                                            weekday.mealBreakdown?.lunch || 0
+                                                        ),
+                                                        backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                                        borderColor: '#36A2EB',
+                                                        borderWidth: 1
+                                                    },
+                                                    {
+                                                        label: 'Snacks Paused',
+                                                        data: Object.values(data.distributions?.weekdays || {}).map(weekday => 
+                                                            weekday.mealBreakdown?.snacks || 0
+                                                        ),
+                                                        backgroundColor: 'rgba(255, 206, 86, 0.8)',
+                                                        borderColor: '#FFCE56',
+                                                        borderWidth: 1
+                                                    },
+                                                    {
+                                                        label: 'Dinner Paused',
+                                                        data: Object.values(data.distributions?.weekdays || {}).map(weekday => 
+                                                            weekday.mealBreakdown?.dinner || 0
+                                                        ),
+                                                        backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                                                        borderColor: '#4BC0C0',
+                                                        borderWidth: 1
+                                                    }
+                                                ]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'x',
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'top',
+                                                    },
+                                                    title: {
+                                                        display: true,
+                                                        text: 'Paused Meals Count by Weekday & Meal Type'
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Count of Meals Paused'
+                                                        }
+                                                    },
+                                                    x: {
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Day of Week'
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Daily Trends Table
                     <div className="row mb-4">
                         <div className="col-12">
                             <div className="card">
@@ -618,7 +963,7 @@ const FoodAnalytics = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Meal Distribution Table */}
                     <div className="row mb-4">
@@ -709,7 +1054,7 @@ const FoodAnalytics = () => {
                     </div>
 
                     {/* Insights Section */}
-                    <div className="card">
+                    {/* <div className="card">
                         <div className="card-header bg-info text-white">
                             <h5 className="mb-0">
                                 <i className="bi bi-lightbulb me-2"></i>
@@ -735,7 +1080,7 @@ const FoodAnalytics = () => {
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </div> */}
                         </>);
                     })()}
                 </div>
