@@ -26,7 +26,7 @@ const VisitorPreferences = () => {
   const loadPreferences = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:4000/api/otp/students/${user.id}/preferences`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/otp/students/${user.id}/preferences`, {
         credentials: 'include'
       });
       
@@ -47,7 +47,7 @@ const VisitorPreferences = () => {
   const savePreferences = async () => {
     try {
       setSaving(true);
-      const response = await fetch(`http://localhost:4000/api/otp/students/${user.id}/preferences`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/otp/students/${user.id}/preferences`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

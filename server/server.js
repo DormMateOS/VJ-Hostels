@@ -103,7 +103,7 @@ io.on('connection', (socket) => {
 
             // Broadcast message to all clients in the room
             io.to('community').emit('newMessage', newMessage);
-            console.log(`Message broadcasted to community room`);
+            console.log('Message broadcasted to community room');
         } catch (error) {
             console.error('Error saving message:', error);
         }
@@ -121,7 +121,7 @@ io.on('connection', (socket) => {
 
             // Broadcast message to all clients in the room
             io.to('community').emit('newMessage', newMessage);
-            console.log(`Image message broadcasted to community room`);
+            console.log('Image message broadcasted to community room');
         } catch (error) {
             console.error('Error saving image message:', error);
         }
@@ -152,13 +152,13 @@ server.listen(port, () => {
     .then(() => {
         console.log("MongoDB connection successful!");
             // Start scheduled jobs that depend on DB
-            try {
-                const { scheduleDailyCleanup } = require('./jobs/foodPauseCleanup');
-                scheduleDailyCleanup();
-                console.log('Scheduled food pause cleanup job started');
-            } catch (err) {
-                console.error('Failed to start scheduled jobs:', err);
-            }
+            // try {
+            //     const { scheduleDailyCleanup } = require('./jobs/foodPauseCleanup');
+            //     scheduleDailyCleanup();
+            //     console.log('Scheduled food pause cleanup job started');
+            // } catch (err) {
+            //     console.error('Failed to start scheduled jobs:', err);
+            // }
     })
     .catch(err => {
         console.error("Error in DB connection:", err);

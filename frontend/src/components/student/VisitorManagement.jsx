@@ -31,9 +31,9 @@ const VisitorManagement = () => {
     if (user) {
       loadActiveOTPs();
       loadVisitHistory();
-      
-      const socket = io('http://localhost:4000');
-      
+
+      const socket = io(import.meta.env.VITE_SERVER_URL);
+
       console.log('Listening for OTPs on channel:', `student-${user.id}`);
       console.log('User object in VisitorManagement:', user);
       
@@ -91,7 +91,7 @@ const VisitorManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4000/api/otp/students/${user.id}/active-otps`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/otp/students/${user.id}/active-otps`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -119,7 +119,7 @@ const VisitorManagement = () => {
   const loadVisitHistory = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4000/api/otp/students/${user.id}/visits?limit=20`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/otp/students/${user.id}/visits?limit=20`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -212,7 +212,7 @@ const VisitorManagement = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4000/api/otp/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/api/otp/generate`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

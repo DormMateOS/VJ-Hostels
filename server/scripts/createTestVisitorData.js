@@ -9,7 +9,7 @@ const OTP = require('../models/OTPModel');
 async function createTestData() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.DBURL || 'mongodb://localhost:27017/hostel-management');
+    await mongoose.connect(process.env.DBURL || 'mongodb://localhost:27017/vj-hostels');
     console.log('Connected to MongoDB');
 
     // Find a student to use for test data

@@ -6,7 +6,7 @@ const Admin = require('./models/AdminModel');
 async function createTestUsers() {
   try {
     // Connect to MongoDB
-    await mongoose.connect('mongodb://localhost:27017/hostel-management');
+    await mongoose.connect(process.env.DBURL);
     console.log('Connected to MongoDB');
 
     // Check if test student exists

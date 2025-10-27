@@ -15,16 +15,6 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
     const [message, setMessage] = useState(null);
     const [submitting, setSubmitting] = useState(false);
 
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const mealTimings = {
-        breakfast: { start: "07:00", editDeadline: "05:00" },
-        lunch: { start: "12:30", editDeadline: "10:30" },
-        snacks: { start: "16:30", editDeadline: "14:30" },
-        dinner: { start: "19:30", editDeadline: "17:30" }
-    };
-
     useEffect(() => {
         if (user?.rollNumber) {
             fetchPausedMeals();
@@ -41,6 +31,35 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
         }
     }, [outpassData]);
 
+    const mealTimings = {
+        breakfast: { start: "07:00", editDeadline: "05:00" },
+        lunch: { start: "12:30", editDeadline: "10:30" },
+        snacks: { start: "16:30", editDeadline: "14:30" },
+        dinner: { start: "19:30", editDeadline: "17:30" }
+    };
+
+    // Get today's date in local timezone (not UTC)
+    const getTodayStr = () => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Get tomorrow's date in local timezone (not UTC)
+    const getTomorrowStr = () => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const year = tomorrow.getFullYear();
+        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(tomorrow.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    const today = getTodayStr();
+    const tomorrow = getTomorrowStr();
+
     const fetchPausedMeals = async () => {
         try {
             setLoading(true);
@@ -55,8 +74,6 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
 
     const handlePauseTypeSelect = (type) => {
         setPauseType(type);
-        const todayDate = new Date();
-        const tomorrowDate = new Date(todayDate.getTime() + 24 * 60 * 60 * 1000);
 
         switch (type) {
             case 'today':
@@ -141,7 +158,12 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
     const canEditMeal = (meal, pauseDate) => {
         const now = new Date();
         const currentTime = now.toTimeString().slice(0, 5);
-        const currentDate = now.toISOString().split('T')[0];
+        
+        // Get current date in local timezone (not UTC)
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDate = `${year}-${month}-${day}`;
         
         if (pauseDate === currentDate) {
             return currentTime < mealTimings[meal].editDeadline;
@@ -150,7 +172,13 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
     };
 
     const categorizesPauses = () => {
-        const currentDate = new Date().toISOString().split('T')[0];
+        // Get current date in local timezone (not UTC)
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDate = `${year}-${month}-${day}`;
+        
         return {
             active: pausedMeals.filter(p => p.pause_start_date <= currentDate && p.pause_end_date >= currentDate && p.is_active),
             upcoming: pausedMeals.filter(p => p.pause_start_date > currentDate && p.is_active),
@@ -208,6 +236,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                             <button
                                 className={`nav-link ${activeTab === 'pause' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('pause')}
+                                style={{ color: activeTab === 'pause' ? '#0c63e4' : '#333' }}
                             >
                                 <i className="bi bi-plus-circle me-2"></i>
                                 Pause Meals
@@ -217,6 +246,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                             <button
                                 className={`nav-link ${activeTab === 'manage' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('manage')}
+                                style={{ color: activeTab === 'manage' ? '#0c63e4' : '#333' }}
                             >
                                 <i className="bi bi-list-check me-2"></i>
                                 My Paused Meals
@@ -380,64 +410,6 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                                             </div>
 
                                             <div className="d-flex gap-4 justify-content-center mb-4">
-                                                <button
-                                                    className="btn px-5 py-3"
-                                                    onClick={() => setSelectedMeals(['breakfast', 'lunch', 'snacks', 'dinner'])}
-                                                    style={{
-                                                        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '15px',
-                                                        fontWeight: '700',
-                                                        fontSize: '1.1rem',
-                                                        boxShadow: '0 8px 20px rgba(34, 197, 94, 0.4)',
-                                                        transition: 'all 0.3s ease',
-                                                        textTransform: 'uppercase',
-                                                        letterSpacing: '0.5px'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.target.style.transform = 'translateY(-3px) scale(1.05)';
-                                                        e.target.style.boxShadow = '0 12px 30px rgba(34, 197, 94, 0.6)';
-                                                        e.target.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.target.style.transform = 'translateY(0) scale(1)';
-                                                        e.target.style.boxShadow = '0 8px 20px rgba(34, 197, 94, 0.4)';
-                                                        e.target.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
-                                                    }}
-                                                >
-                                                    <i className="bi bi-check-all me-2" style={{ fontSize: '1.2rem' }}></i>
-                                                    SELECT ALL MEALS
-                                                </button>
-                                                <button
-                                                    className="btn px-5 py-3"
-                                                    onClick={() => setSelectedMeals([])}
-                                                    style={{
-                                                        background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '15px',
-                                                        fontWeight: '700',
-                                                        fontSize: '1.1rem',
-                                                        boxShadow: '0 8px 20px rgba(239, 68, 68, 0.4)',
-                                                        transition: 'all 0.3s ease',
-                                                        textTransform: 'uppercase',
-                                                        letterSpacing: '0.5px'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.target.style.transform = 'translateY(-3px) scale(1.05)';
-                                                        e.target.style.boxShadow = '0 12px 30px rgba(239, 68, 68, 0.6)';
-                                                        e.target.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.target.style.transform = 'translateY(0) scale(1)';
-                                                        e.target.style.boxShadow = '0 8px 20px rgba(239, 68, 68, 0.4)';
-                                                        e.target.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                                                    }}
-                                                >
-                                                    <i className="bi bi-x-square me-2" style={{ fontSize: '1.2rem' }}></i>
-                                                    CLEAR ALL
-                                                </button>
                                             </div>
 
                                             <div className="mt-5 text-center">
@@ -493,36 +465,6 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                                                             PAUSE MEALS
                                                         </>
                                                     )}
-                                                </button>
-                                                <button 
-                                                    className="btn" 
-                                                    onClick={resetForm}
-                                                    style={{
-                                                        background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                                                        color: 'white',
-                                                        border: 'none',
-                                                        borderRadius: '20px',
-                                                        fontWeight: '800',
-                                                        fontSize: '1.3rem',
-                                                        padding: '15px 40px',
-                                                        boxShadow: '0 10px 25px rgba(249, 115, 22, 0.5)',
-                                                        transition: 'all 0.4s ease',
-                                                        textTransform: 'uppercase',
-                                                        letterSpacing: '1px'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.target.style.transform = 'translateY(-5px) scale(1.08)';
-                                                        e.target.style.boxShadow = '0 15px 35px rgba(249, 115, 22, 0.7)';
-                                                        e.target.style.background = 'linear-gradient(135deg, #ea580c 0%, #dc2626 100%)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.target.style.transform = 'translateY(0) scale(1)';
-                                                        e.target.style.boxShadow = '0 10px 25px rgba(249, 115, 22, 0.5)';
-                                                        e.target.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
-                                                    }}
-                                                >
-                                                    <i className="bi bi-x-circle me-3" style={{ fontSize: '1.4rem' }}></i>
-                                                    CANCEL
                                                 </button>
                                             </div>
                                         </div>

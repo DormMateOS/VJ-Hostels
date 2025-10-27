@@ -5,7 +5,7 @@ const { OAuth2Client } = require('google-auth-library');
 const Student = require('../models/StudentModel');
 const FoodPause = require('../models/FoodPause');
 
-const GOOGLE_CLIENT_ID = '522460567146-ubk3ojomopil8f68hl73jt1pj0jbbm68.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 const googleOAuth = asyncHandler(async (req, res) => {

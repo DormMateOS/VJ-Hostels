@@ -122,7 +122,7 @@ const Students = () => {
         setFormLoading(true);
 
         try {
-            await axios.post('process.env.SERVER_URL/admin-api/student-register',
+            await axios.post(`${API_BASE_URL}/admin-api/student-register`,
                 formData,
                 {
                     headers: {

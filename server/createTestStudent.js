@@ -6,7 +6,7 @@ require('dotenv').config();
 const Student = require('./models/StudentModel');
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/hostel-management')
+mongoose.connect(process.env.DBURL)
   .then(async () => {
     console.log('Connected to MongoDB');
     
