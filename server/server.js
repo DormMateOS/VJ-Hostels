@@ -23,9 +23,18 @@ const otpRoutes = require('./routes/otpRoutes');
 // const complaintApp = require('./APIs/complaintAPI');
 
 // middleware
+// CORS Configuration - Allow frontend origin with credentials support
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3101'],
-  credentials: true,
+  origin: [
+    'http://localhost:5173',  // Default Vite port
+    'http://localhost:5174',  // Alternative Vite port
+    'http://localhost:3101',  // Previous frontend port
+    'http://localhost:3201',  // Current frontend port (React on 3201)
+  ],
+  credentials: true, // Allow cookies and authorization headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed request headers
+  exposedHeaders: ['set-cookie'], // Expose cookies to frontend
 }));
 
 // body parser middleware
