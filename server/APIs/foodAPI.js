@@ -653,20 +653,24 @@ foodApp.get('/student/menu/weekly-schedule-structured', expressAsyncHandler(asyn
         const { WeeklyFoodMenu } = require('../models/FoodModel');
         
         const today = new Date();
-        const currentMonth = today.getMonth() + 1;
-        const currentYear = today.getFullYear();
         const dayOfMonth = today.getDate();
-        
-        // Calculate which week of the month we're in
-        const weekOfMonth = Math.ceil(dayOfMonth / 7);
-        const currentWeek = Math.min(weekOfMonth, 4);
-        
-        console.log(`[WEEKLY SCHEDULE STRUCTURED] Fetching for month: ${currentMonth}, year: ${currentYear}, week: ${currentWeek}`);
-        
-        // Get the current week's menu
+
+        // Calculate rotation-based current week (use same logic as controllers)
+        const ROTATION_EPOCH_UTC = new Date(Date.UTC(2025, 0, 6));
+        function getRotationWeekIndex(date = new Date()) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+            const weeksSinceEpoch = Math.floor((d - ROTATION_EPOCH_UTC) / msPerWeek);
+            const idx = ((weeksSinceEpoch % 4) + 4) % 4;
+            return idx + 1;
+        }
+
+        const currentWeek = getRotationWeekIndex(today);
+
+        console.log(`[WEEKLY SCHEDULE STRUCTURED] Fetching rotation-based week: ${currentWeek}`);
+
+        // Get the current week's menu template
         const weekMenu = await WeeklyFoodMenu.findOne({
-            month: currentMonth,
-            year: currentYear,
             week: currentWeek
         });
         
@@ -718,28 +722,43 @@ foodApp.get('/student/menu/weekly-schedule-structured', expressAsyncHandler(asyn
     }
 }));
 
+// Return raw weekly rotation templates (useful for admin UI / seeding verification)
+foodApp.get('/menu/templates', expressAsyncHandler(async (req, res) => {
+    try {
+        const { WeeklyFoodMenu } = require('../models/FoodModel');
+        const templates = await WeeklyFoodMenu.find({}).sort({ week: 1 });
+        res.status(200).json({ success: true, data: templates });
+    } catch (error) {
+        console.error('Error fetching weekly templates:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+}));
+
 // Get today's menu from weekly schedule
 foodApp.get('/student/menu/today-from-schedule', expressAsyncHandler(async (req, res) => {
     try {
         const { WeeklyFoodMenu } = require('../models/FoodModel');
         
         const today = new Date();
-        const currentMonth = today.getMonth() + 1;
-        const currentYear = today.getFullYear();
-        const dayOfMonth = today.getDate();
         const dayOfWeek = today.getDay();
-        
-        // Calculate which week of the month
-        const weekOfMonth = Math.ceil(dayOfMonth / 7);
-        const adjustedWeek = Math.min(weekOfMonth, 4);
+
+        // Calculate rotation-based week
+        const ROTATION_EPOCH_UTC = new Date(Date.UTC(2025, 0, 6));
+        function getRotationWeekIndex(date = new Date()) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+            const weeksSinceEpoch = Math.floor((d - ROTATION_EPOCH_UTC) / msPerWeek);
+            const idx = ((weeksSinceEpoch % 4) + 4) % 4;
+            return idx + 1;
+        }
+
+        const adjustedWeek = getRotationWeekIndex(today);
         
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const dayName = dayNames[dayOfWeek];
         
-        // Find the appropriate week menu
+        // Find the appropriate week menu template
         const weekMenu = await WeeklyFoodMenu.findOne({
-            month: currentMonth,
-            year: currentYear,
             week: adjustedWeek
         });
         

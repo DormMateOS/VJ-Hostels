@@ -25,18 +25,9 @@ const foodMenuSchema = new mongoose.Schema({
     }
 });
 
-// Weekly Food Menu Schema - New schema for monthly menu management
+// Weekly Food Menu Schema - fixed 4-week rotation template (no month/year)
 const weeklyFoodMenuSchema = new mongoose.Schema({
-    month: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 12
-    },
-    year: {
-        type: Number,
-        required: true
-    },
+    // week is 1..4 identifying the template slot in the rotation
     week: {
         type: Number,
         required: true,
