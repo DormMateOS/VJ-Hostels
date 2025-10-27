@@ -5,7 +5,7 @@ require('dotenv').config();
 // Connect to MongoDB
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.DBURL || 'mongodb://localhost:27017/vj-hostels');
+        await mongoose.connect(process.env.DBURL);
         console.log('MongoDB connected successfully');
     } catch (error) {
         console.error('MongoDB connection error:', error);
@@ -14,181 +14,181 @@ const connectDB = async () => {
 };
 
 // Sample monthly menu data
-const monthlyMenuData = {
+const WeeklyMenuData = {
     week1: {
         monday: {
-            breakfast: "Idli, Sambar, Chutney",
-            lunch: "Rice, Dal, Paneer Curry, Salad",
-            snacks: "Samosa, Tea",
-            dinner: "Chapati, Mixed Veg Curry, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, MASALA DOSA WITH PEANUT CHUTNEY",
+            lunch: "WHITE RICE, SAMBAR, CURD, CAULIFLOWER FRY, KAKARAKAYA FRY",
+            snacks: "GIRLS: NOODLES, VEG EGG",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, TOMATO CURRY, DOSAKAYA CHUTNEY"
         },
         tuesday: {
-            breakfast: "Poha, Chutney",
-            lunch: "Jeera Rice, Rajma, Salad",
-            snacks: "Biscuits, Coffee",
-            dinner: "Roti, Aloo Gobi, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, IDLY WITH BATATA",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE, SATTILU FRY, TOMATO PAPPU, GONGURA CHUTNEY",
+            snacks: "BOYS: MASALA VADA (OR) BONDA (TOMATO SAUCE)",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, TOMATO CURry, BENDI FRY, MANGO PICKLE"
         },
         wednesday: {
-            breakfast: "Upma, Chutney",
-            lunch: "Rice, Chole, Salad",
-            snacks: "Pakora, Tea",
-            dinner: "Chapati, Bhindi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, BESAN UPMA",
+            lunch: "WHITE RICE, SAMBAR, CURD, POORIS (4), LITTLE CUT VEGETABLE CURRY, GONGURA CHUTNEY, KAKARAKAYA PAPPU, TOMATO CHUTNEY",
+            snacks: "BOYS: SWEET CORN, SENGALU, JAMMUKAI / GIRLS: THREE BEANS SALAD, CORN FLAKES, UPMA",
+            dinner: "WHITE RICE, ROTI, ALOO, PANEER, BUTTER MASALA, VANKAYA CHUTNEY"
         },
         thursday: {
-            breakfast: "Dosa, Chutney",
-            lunch: "Rice, Sambar, Potato Fry",
-            snacks: "Cake, Coffee",
-            dinner: "Roti, Mixed Veg, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, UTTAPAM",
+            lunch: "WHITE RICE, SAMBAR, CURD, ALU-CHOKA & BINDI AZE, VEG-MANCHURIA",
+            snacks: "GIRLS: VEG MAGGI / BOYS: MIRCHI BAJJI + FRIED CHILLIES",
+            dinner: "WHITE RICE, ROTI, BENDI, TOMATO CURRY, KAKARAKAYA FRY, DOSAKAYA PAPPU"
         },
         friday: {
-            breakfast: "Paratha, Curd",
-            lunch: "Rice, Dal Makhani, Salad",
-            snacks: "Chips, Tea",
-            dinner: "Chapati, Paneer Butter Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, VADA (4) (BOYS/GIRLS)",
+            lunch: "WHITE RICE, SAMBAR, CURD, CRISPY ALOO FRY (B/G), MANGO PAPPU, COCONUT CHUTNEY",
+            snacks: "SWEET (GULAB JAMUN), MIRCHI BAJJI",
+            dinner: "WHITE RICE, ROTI, EGG BIRYANI, VEG BIRYANI, MASALA GRAVY (EGG CURRY), ONION, CUCUMBER, TOMATO, RAITHA"
         },
         saturday: {
-            breakfast: "Puri, Aloo Bhaji",
-            lunch: "Veg Biryani, Raita",
-            snacks: "Mixture, Coffee",
-            dinner: "Roti, Gobi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, IDLY (BOYS) / VADA (4) (GIRLS)",
+            lunch: "WHITE RICE, SAMBAR, CURD, RAJMA AND ALOO (CURRY), BRINJAL FRY, BEERAKAYA ROTI PACHADI",
+            snacks: "BOYS: MASALA CHAT / GIRLS: VEG MAGGI",
+            dinner: "WHITE RICE, ROTI, EGG BIRYANI, VEG BIRYANI, CHICKEN 65, PANEER 65, RAITHA, LEMON, ONION"
         },
         sunday: {
-            breakfast: "Bread, Butter, Jam",
-            lunch: "Rice, Dal Fry, Salad",
-            snacks: "Fruit Salad, Tea",
-            dinner: "Chapati, Veg Korma, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, POORI & ALOO (B/G)",
+            lunch: "WHITE RICE, SAMBAR, CURD, ALOO AND BEETROOT BEANS FASIA (TOTALURA PAPPU), MATTIGA KULU (MIX VEG CHUTNEY)",
+            snacks: "SEASONAL JUICE/FRUITS (LESS WATERMELON)",
+            dinner: "GIRLS: VEG BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY / BOYS: CHICKEN BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY"
         }
     },
     week2: {
         monday: {
-            breakfast: "Idli, Sambar, Chutney",
-            lunch: "Rice, Dal, Paneer Curry, Salad",
-            snacks: "Samosa, Tea",
-            dinner: "Chapati, Mixed Veg Curry, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, PONGAL",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE FRY",
+            snacks: "BOYS: NOODLES, VEG EGG",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, TOMATO CURRY, DOSAKAYA CHUTNEY"
         },
         tuesday: {
-            breakfast: "Poha, Chutney",
-            lunch: "Jeera Rice, Rajma, Salad",
-            snacks: "Biscuits, Coffee",
-            dinner: "Roti, Aloo Gobi, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, PONGAL",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE, SATTILU FRY, TOMATO PAPPU, GONGURA CHUTNEY",
+            snacks: "GIRLS: TOMATO SAUCE SALAD (WITH ONION CHUTNEY) / BOYS: ALOO BONDA (PULUSU CHUTNEY)",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, TOMATO CURRY, BENDI FRY, MANGO PICKLE"
         },
         wednesday: {
-            breakfast: "Upma, Chutney",
-            lunch: "Rice, Chole, Salad",
-            snacks: "Pakora, Tea",
-            dinner: "Chapati, Bhindi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, IDLY",
+            lunch: "WHITE RICE, SAMBAR, CURD, POORIS (4), LITTLE CUT VEGETABLE CURRY, GONGURA CHUTNEY, KAKARAKAYA PAPPU, TOMATO CHUTNEY",
+            snacks: "GIRLS: SWEET CORN, SENGALU, JAMMUKAI / BOYS: THREE BEANS SALAD, CORN FLAKES, UPMA",
+            dinner: "WHITE RICE, ROTI, ALOO, PANEER, BUTTER MASALA, VANKAYA CHUTNEY"
         },
         thursday: {
-            breakfast: "Dosa, Chutney",
-            lunch: "Rice, Sambar, Potato Fry",
-            snacks: "Cake, Coffee",
-            dinner: "Roti, Mixed Veg, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, SETT UTTAPAM",
+            lunch: "WHITE RICE, SAMBAR, CURD, ALU-CHOKA & BINDI AZE, VEG-MANCHURIA",
+            snacks: "BOYS: VEG MAGGI / GIRLS: MIRCHI BAJJI + FRIED CHILLIES",
+            dinner: "WHITE RICE, ROTI, BENDI, TOMATO CURRY, KAKARAKAYA FRY, DOSAKAYA PAPPU"
         },
         friday: {
-            breakfast: "Paratha, Curd",
-            lunch: "Rice, Dal Makhani, Salad",
-            snacks: "Chips, Tea",
-            dinner: "Chapati, Paneer Butter Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, SETT DOSA",
+            lunch: "WHITE RICE, SAMBAR, CURD, SEMIYA PAYASAM (B/G), BENDI FRY, RICE DAL TADKA",
+            snacks: "ALOO BONDA",
+            dinner: "WHITE RICE, ROTI, EGG BIRYANI, VEG BIRYANI, MASALA GRAVY (EGG CURRY), ONION, CUCUMBER, TOMATO, RAITHA"
         },
         saturday: {
-            breakfast: "Puri, Aloo Bhaji",
-            lunch: "Veg Biryani, Raita",
-            snacks: "Mixture, Coffee",
-            dinner: "Roti, Gobi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, UTTAPAM",
+            lunch: "WHITE RICE, SAMBAR, CURD, RAJMA AND ALOO (CURRY), BRINJAL FRY, BEERAKAYA ROTI PACHADI",
+            snacks: "GIRLS: MASALA CHAT / BOYS: VEG MAGGI",
+            dinner: "WHITE RICE, ROTI, EGG BIRYANI, VEG BIRYANI, CHICKEN 65, PANEER 65, RAITHA, LEMON, ONION"
         },
         sunday: {
-            breakfast: "Bread, Butter, Jam",
-            lunch: "Rice, Dal Fry, Salad",
-            snacks: "Fruit Salad, Tea",
-            dinner: "Chapati, Veg Korma, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, IDLY (B/G)",
+            lunch: "WHITE RICE, SAMBAR, CURD, ALOO AND BEETROOT BEANS FASIA (TOTALURA PAPPU), MATTIGA KULU (MIX VEG CHUTNEY)",
+            snacks: "SEASONAL JUICE/FRUITS (LESS WATERMELON)",
+            dinner: "GIRLS: VEG BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY / BOYS: CHICKEN BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY"
         }
     },
     week3: {
         monday: {
-            breakfast: "Idli, Sambar, Chutney",
-            lunch: "Rice, Dal, Paneer Curry, Salad",
-            snacks: "Samosa, Tea",
-            dinner: "Chapati, Mixed Veg Curry, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, TOMATO BATH",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE FRY",
+            snacks: "GIRLS: FRIED RICE, VEG EGG",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, TOMATO CURRY, DOSAKAYA CHUTNEY"
         },
         tuesday: {
-            breakfast: "Poha, Chutney",
-            lunch: "Jeera Rice, Rajma, Salad",
-            snacks: "Biscuits, Coffee",
-            dinner: "Roti, Aloo Gobi, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, IDLY WITH BATATA",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE, SATTILU FRY, TOMATO PAPPU, GONGURA CHUTNEY",
+            snacks: "BOYS: MASALA VADA (OR) BONDA (TOMATO SAUCE)",
+            dinner: "WHITE RICE, ROTI, PIZZA, PANNER CURRY, MANGO PICKLE"
         },
         wednesday: {
-            breakfast: "Upma, Chutney",
-            lunch: "Rice, Chole, Salad",
-            snacks: "Pakora, Tea",
-            dinner: "Chapati, Bhindi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, TOMATO BATH WITH ALOO",
+            lunch: "WHITE RICE, SAMBAR, CURD, (GIRLS/BOYS) ALOO FRY",
+            snacks: "GIRLS: SPROUTS, SWEET CORN / BOYS: CORN FLAKES, UPMA",
+            dinner: "WHITE RICE, ROTI, KAJU PANEER, VEG MASALA, COCONUT LEAVES, GONGURA MASALA"
         },
         thursday: {
-            breakfast: "Dosa, Chutney",
-            lunch: "Rice, Sambar, Potato Fry",
-            snacks: "Cake, Coffee",
-            dinner: "Roti, Mixed Veg, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, PONGAL",
+            lunch: "WHITE RICE, SAMBAR, CURD, (GIRLS/BOYS) JEERA RICE, ONE SPICE ALOO",
+            snacks: "GIRLS: VEG MANCHURIA / BOYS: SAMOSA WITH FRIED CHILLIES",
+            dinner: "WHITE RICE, ROTI, PANEER, BUTTER MASALA"
         },
         friday: {
-            breakfast: "Paratha, Curd",
-            lunch: "Rice, Dal Makhani, Salad",
-            snacks: "Chips, Tea",
-            dinner: "Chapati, Paneer Butter Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, UTTAPAM",
+            lunch: "WHITE RICE, SAMBAR, CURD, SEMIYA PAYASAM (B/G), BENDI FRY, RICE DAL TADKA",
+            snacks: "PANEER PAKODA",
+            dinner: "WHITE RICE, ROTI, EGG BIRYANI, VEG BIRYANI, MASALA GRAVY (EGG CURRY), ONION, CUCUMBER, TOMATO, RAITHA"
         },
         saturday: {
-            breakfast: "Puri, Aloo Bhaji",
-            lunch: "Veg Biryani, Raita",
-            snacks: "Mixture, Coffee",
-            dinner: "Roti, Gobi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, SETT DOSA",
+            lunch: "WHITE RICE, SAMBAR, CURD, (BOYS) IDLY WITH CHICKEN CURRY (LIMITED) / (GIRLS) ALOO CHOLA",
+            snacks: "BOYS: PANI PURI",
+            dinner: "WHITE RICE, ROTI, SAMBAR RICE, BUDDAPAPPU PACHADI, BANANA"
         },
         sunday: {
-            breakfast: "Bread, Butter, Jam",
-            lunch: "Rice, Dal Fry, Salad",
-            snacks: "Fruit Salad, Tea",
-            dinner: "Chapati, Veg Korma, Curd"
+            breakfast: "IDLY, SAMBAR, GHEE, CHUTNEY",
+            lunch: "WHITE RICE, SAMBAR, CURD, GHEE ROAST MASALA (B/G) WITH SAMBAR",
+            snacks: "TOMATO, MUSKMELON APPLE PACHADI, PAPAD, BANANA, MANGO PICKLE",
+            dinner: "GIRLS: VEG BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY / BOYS: CHICKEN BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY"
         }
     },
     week4: {
         monday: {
-            breakfast: "Idli, Sambar, Chutney",
-            lunch: "Rice, Dal, Paneer Curry, Salad",
-            snacks: "Samosa, Tea",
-            dinner: "Chapati, Mixed Veg Curry, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, PONGAL",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE FRY",
+            snacks: "BOYS: FRIED RICE, VEG EGG",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, TOMATO CURRY, DOSAKAYA CHUTNEY"
         },
         tuesday: {
-            breakfast: "Poha, Chutney",
-            lunch: "Jeera Rice, Rajma, Salad",
-            snacks: "Biscuits, Coffee",
-            dinner: "Roti, Aloo Gobi, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, PONGAL",
+            lunch: "WHITE RICE, SAMBAR, CURD, CABBAGE, SATTILU FRY, TOMATO PAPPU, GONGURA CHUTNEY",
+            snacks: "GIRLS: TOMATO SAUCE SALAD (WITH ONION CHUTNEY) / BOYS: ALOO BONDA (PULUSU CHUTNEY)",
+            dinner: "WHITE RICE, ROTI, EGG CURRY, MASALA VADA, VEG CURRY, MANGO PICKLE"
         },
         wednesday: {
-            breakfast: "Upma, Chutney",
-            lunch: "Rice, Chole, Salad",
-            snacks: "Pakora, Tea",
-            dinner: "Chapati, Bhindi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, ONION UTTAPAM WITH CHUTNEY",
+            lunch: "WHITE RICE, SAMBAR, CURD, (GIRLS/BOYS) ALOO FRY",
+            snacks: "BOYS: SPROUTS, SWEET CORN / GIRLS: CORN FLAKES, UPMA",
+            dinner: "WHITE RICE, ROTI, PANEER, BUTTER MASALA"
         },
         thursday: {
-            breakfast: "Dosa, Chutney",
-            lunch: "Rice, Sambar, Potato Fry",
-            snacks: "Cake, Coffee",
-            dinner: "Roti, Mixed Veg, Raita"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, UTTAPAM",
+            lunch: "WHITE RICE, SAMBAR, CURD, (GIRLS/BOYS) JEERA RICE, ONE SPICE ALOO",
+            snacks: "BOYS: VEG MANCHURIA / GIRLS: SAMOSA WITH FRIED CHILLIES",
+            dinner: "WHITE RICE, ROTI, BENDI, TOMATO CURRY, KAKARAKAYA FRY, DOSAKAYA PAPPU"
         },
         friday: {
-            breakfast: "Paratha, Curd",
-            lunch: "Rice, Dal Makhani, Salad",
-            snacks: "Chips, Tea",
-            dinner: "Chapati, Paneer Butter Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, VADA (4) (BOYS/GIRLS)",
+            lunch: "WHITE RICE, SAMBAR, CURD, SEMIYA PAYASAM (B/G), BENDI FRY, RICE DAL TADKA",
+            snacks: "VEG MAGGI",
+            dinner: "WHITE RICE, ROTI, EGG BIRYANI, VEG BIRYANI, MASALA GRAVY (EGG CURRY), ONION, CUCUMBER, TOMATO, RAITHA"
         },
         saturday: {
-            breakfast: "Puri, Aloo Bhaji",
-            lunch: "Veg Biryani, Raita",
-            snacks: "Mixture, Coffee",
-            dinner: "Roti, Gobi Masala, Curd"
+            breakfast: "IDLY, SAMBAR, CHUTNEY, GHEE, SETT DOSA",
+            lunch: "WHITE RICE, SAMBAR, CURD, (GIRLS) IDLY WITH CHICKEN CURRY (LIMITED) / (BOYS) ALOO CHOLA",
+            snacks: "GIRLS: PANI PURI",
+            dinner: "WHITE RICE, ROTI, SAMBAR RICE, BUDDAPAPPU PACHADI, BANANA"
         },
         sunday: {
-            breakfast: "Bread, Butter, Jam",
-            lunch: "Rice, Dal Fry, Salad",
-            snacks: "Fruit Salad, Tea",
-            dinner: "Chapati, Veg Korma, Curd"
+            breakfast: "IDLY, SAMBAR, GHEE, CHUTNEY",
+            lunch: "WHITE RICE, SAMBAR, CURD, GHEE ROAST MASALA (B/G) WITH SAMBAR",
+            snacks: "TOMATO, MUSKMELON APPLE PACHADI, PAPAD, BANANA, MANGO PICKLE",
+            dinner: "GIRLS: VEG BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY / BOYS: CHICKEN BIRYANI WITH BASMATI RICE, CHICKEN CURRY, PANEER CURRY"
         }
     }
 };
@@ -198,25 +198,15 @@ const seedFoodMenuData = async () => {
     try {
         console.log('Starting food menu data seeding...');
         
-        // Get current month and year
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-        const currentYear = now.getFullYear();
-        
-        // Clear existing data for current month
-        await WeeklyFoodMenu.deleteMany({ 
-            month: currentMonth, 
-            year: currentYear 
-        });
-        console.log('Cleared existing menu data for current month');
-        
-        // Insert new data
-        const menuPromises = Object.entries(monthlyMenuData).map(([weekName, weekData]) => {
+        // Clear existing rotation templates (we keep a single 4-week template set)
+        await WeeklyFoodMenu.deleteMany({});
+        console.log('Cleared existing weekly rotation templates');
+
+        // Insert the 4 weekly templates (week1..week4)
+        const menuPromises = Object.entries(WeeklyMenuData).map(([weekName, weekData]) => {
             const weekNumber = parseInt(weekName.replace('week', ''));
-            
+
             return WeeklyFoodMenu.create({
-                month: currentMonth,
-                year: currentYear,
                 week: weekNumber,
                 weekName: weekName,
                 days: weekData
@@ -227,11 +217,8 @@ const seedFoodMenuData = async () => {
         console.log('Successfully seeded food menu data for all 4 weeks');
         
         // Verify the data
-        const count = await WeeklyFoodMenu.countDocuments({ 
-            month: currentMonth, 
-            year: currentYear 
-        });
-        console.log(`Total menu records created: ${count}`);
+        const count = await WeeklyFoodMenu.countDocuments({});
+        console.log(`Total weekly templates created: ${count}`);
         
     } catch (error) {
         console.error('Error seeding food menu data:', error);

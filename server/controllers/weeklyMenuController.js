@@ -1,20 +1,22 @@
 const { WeeklyFoodMenu } = require('../models/FoodModel');
 
-// Get monthly menu data
+// Epoch for rotation (choose a Monday so week boundaries align). You can change this later.
+const ROTATION_EPOCH_UTC = new Date(Date.UTC(2025, 0, 6)); // 2025-01-06 (Monday)
+
+function getRotationWeekIndex(date = new Date()) {
+    // normalize date to UTC midnight
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const weeksSinceEpoch = Math.floor((d - ROTATION_EPOCH_UTC) / msPerWeek);
+    const idx = ((weeksSinceEpoch % 4) + 4) % 4; // ensure positive
+    return idx + 1; // 1..4
+}
+
+// Get template menu data (returns the 4 rotation templates)
 const getMonthlyMenu = async (req, res) => {
     try {
-        const { month, year } = req.query;
-        
-        // Use current month/year if not provided
-        const now = new Date();
-        const targetMonth = month ? parseInt(month) : now.getMonth() + 1;
-        const targetYear = year ? parseInt(year) : now.getFullYear();
-        
-        // Fetch all weeks for the specified month/year
-        const weeklyMenus = await WeeklyFoodMenu.find({
-            month: targetMonth,
-            year: targetYear
-        }).sort({ week: 1 });
+        // Fetch all 4 templates (week 1..4)
+        const weeklyMenus = await WeeklyFoodMenu.find({}).sort({ week: 1 });
         
         // Transform data to match frontend structure
         const monthlyMenuData = {};
@@ -42,9 +44,7 @@ const getMonthlyMenu = async (req, res) => {
         
         res.status(200).json({
             success: true,
-            data: monthlyMenuData,
-            month: targetMonth,
-            year: targetYear
+            data: monthlyMenuData
         });
         
     } catch (error) {
@@ -69,18 +69,11 @@ const updateDayMenu = async (req, res) => {
             });
         }
         
-        // Get current month/year
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        
         // Extract week number from week string (e.g., "week1" -> 1)
         const weekNumber = parseInt(week.replace('week', ''));
-        
-        // Find the weekly menu document
+
+        // Find the weekly menu document (rotation template is yearless)
         let weeklyMenu = await WeeklyFoodMenu.findOne({
-            month: currentMonth,
-            year: currentYear,
             week: weekNumber,
             weekName: week
         });
@@ -98,8 +91,6 @@ const updateDayMenu = async (req, res) => {
             };
             
             weeklyMenu = new WeeklyFoodMenu({
-                month: currentMonth,
-                year: currentYear,
                 week: weekNumber,
                 weekName: week,
                 days: emptyWeekStructure
@@ -137,15 +128,11 @@ const updateDayMenu = async (req, res) => {
 const getCurrentWeek = async (req, res) => {
     try {
         const now = new Date();
-        const dayOfMonth = now.getDate();
-        const weekNumber = Math.ceil(dayOfMonth / 7);
-        const currentWeek = Math.min(weekNumber, 4);
-        
+        const currentWeek = getRotationWeekIndex(now);
+
         res.status(200).json({
             success: true,
-            currentWeek: currentWeek,
-            month: now.getMonth() + 1,
-            year: now.getFullYear()
+            currentWeek: currentWeek
         });
         
     } catch (error) {
@@ -170,25 +157,16 @@ const updateWeekMenu = async (req, res) => {
             });
         }
         
-        // Get current month/year
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-        
         // Extract week number from week string
         const weekNumber = parseInt(week.replace('week', ''));
-        
-        // Update or create the weekly menu
+
+        // Update or create the weekly rotation template
         const weeklyMenu = await WeeklyFoodMenu.findOneAndUpdate(
             {
-                month: currentMonth,
-                year: currentYear,
                 week: weekNumber,
                 weekName: week
             },
             {
-                month: currentMonth,
-                year: currentYear,
                 week: weekNumber,
                 weekName: week,
                 days: days
