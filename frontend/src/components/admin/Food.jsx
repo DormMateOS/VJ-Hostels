@@ -60,18 +60,23 @@ const Food = () => {
         dinner: ''
     });
 
-    // Function to get current week number (1-4)
-    const getCurrentWeek = () => {
-        const now = new Date();
-        const dayOfMonth = now.getDate();
-        const weekNumber = Math.ceil(dayOfMonth / 7);
-        return Math.min(weekNumber, 4); // Ensure it's between 1-4
+    // Rotation: compute current rotation week (1-4) using the same epoch as server
+    // Epoch chosen to align weeks to Mondays: 2025-01-06 (Monday)
+    const ROTATION_EPOCH_UTC = new Date(Date.UTC(2025, 0, 6)); // Jan 6, 2025
+    const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+    const getRotationWeek = (date = new Date()) => {
+        // normalize to UTC midnight
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const weeksSinceEpoch = Math.floor((d - ROTATION_EPOCH_UTC) / MS_PER_WEEK);
+        const idx = ((weeksSinceEpoch % 4) + 4) % 4; // 0..3
+        return idx + 1; // 1..4
     };
 
-    const [currentWeek] = useState(() => getCurrentWeek());
+    const [currentWeek] = useState(() => getRotationWeek());
 
     // Week filter state
-    const [selectedWeek, setSelectedWeek] = useState(() => `week${getCurrentWeek()}`);
+    const [selectedWeek, setSelectedWeek] = useState(() => `week${getRotationWeek()}`);
     const [menuFormLoading, setMenuFormLoading] = useState(false);
     const [menuFormSuccess, setMenuFormSuccess] = useState('');
     const [menuFormError, setMenuFormError] = useState('');
@@ -266,17 +271,40 @@ const Food = () => {
         }
     };
 
-    // Fetch monthly menu data from backend
+    // Fetch weekly rotation templates from backend (directly from WeeklyFoodMenu collection)
     const fetchMonthlyMenu = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/menu/monthly`);
-            if (response.data.success) {
-                setMonthlyMenuData(response.data.data);
+            const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/menu/templates`);
+
+            if (response.data && response.data.success && Array.isArray(response.data.data)) {
+                // Transform array of templates into { week1: {...}, week2: {...}, ... }
+                const map = {};
+                response.data.data.forEach(t => {
+                    if (t.weekName && t.days) map[t.weekName] = t.days;
+                });
+                // Ensure we always have 4 weeks keys
+                for (let i = 1; i <= 4; i++) {
+                    const key = `week${i}`;
+                    if (!map[key]) {
+                        map[key] = {
+                            monday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
+                            tuesday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
+                            wednesday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
+                            thursday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
+                            friday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
+                            saturday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
+                            sunday: { breakfast: '', lunch: '', snacks: '', dinner: '' }
+                        };
+                    }
+                }
+                setMonthlyMenuData(map);
+            } else {
+                setMonthlyMenuData({});
             }
             setError('');
         } catch (err) {
-            setError('Failed to load monthly menu');
+            setError('Failed to load weekly templates');
             console.error(err);
         } finally {
             setLoading(false);
@@ -444,6 +472,35 @@ const Food = () => {
     const formatDate = (dateString) => {
         const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
         return new Date(dateString).toLocaleDateString(undefined, options);
+    };
+
+    // Format short date as D/M/YY (no leading zero on day)
+    const formatShort = (d) => {
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        const year = String(d.getFullYear()).slice(-2);
+        return `${day}/${month}/${year}`;
+    };
+
+    // Compute Monday (start) and Sunday (end) dates for a given rotation week key (e.g., 'week1')
+    const getWeekDateRangeForWeekKey = (weekKey) => {
+        if (!weekKey) return null;
+        const targetWeek = parseInt(weekKey.replace('week', ''), 10);
+
+        // current weeksSinceEpoch for today
+        const today = new Date();
+        const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+        const weeksSinceEpochNow = Math.floor((todayUTC - ROTATION_EPOCH_UTC) / MS_PER_WEEK);
+        const currentIdx = ((weeksSinceEpochNow % 4) + 4) % 4 + 1; // 1..4
+
+        // Compute desired weeksSinceEpoch for the selected week that is closest/current relative to now
+        const delta = targetWeek - currentIdx;
+        const desiredWeeksSinceEpoch = weeksSinceEpochNow + delta;
+
+        const mondayUTC = new Date(ROTATION_EPOCH_UTC.getTime() + desiredWeeksSinceEpoch * MS_PER_WEEK);
+        const sundayUTC = new Date(mondayUTC.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+        return { start: mondayUTC, end: sundayUTC };
     };
 
     // Function to get color based on rating
@@ -693,15 +750,25 @@ const Food = () => {
                                             .map(([weekKey, weekData]) => (
                                             <div key={weekKey} className="mb-4">
                                                 <h6 className={`mb-3 d-flex align-items-center ${parseInt(weekKey.replace('week', '')) === currentWeek ? 'text-success' : 'text-primary'}`}>
-                                                    <i className="bi bi-calendar-week me-2"></i>
-                                                    {weekKey.charAt(0).toUpperCase() + weekKey.slice(1)}
-                                                    {parseInt(weekKey.replace('week', '')) === currentWeek && (
-                                                        <span className="badge bg-success ms-2">
-                                                            <i className="bi bi-clock me-1"></i>
-                                                            Current Week
-                                                        </span>
-                                                    )}
-                                                </h6>
+                                                        <i className="bi bi-calendar-week me-2"></i>
+                                                        {weekKey.charAt(0).toUpperCase() + weekKey.slice(1)}
+                                                        {parseInt(weekKey.replace('week', '')) === currentWeek && (
+                                                            <span className="badge bg-success ms-2">
+                                                                <i className="bi bi-clock me-1"></i>
+                                                                Current Week
+                                                            </span>
+                                                        )}
+                                                        {/* Display start-end date range for this rotation week */}
+                                                        {(() => {
+                                                            const range = getWeekDateRangeForWeekKey(weekKey);
+                                                            if (!range) return null;
+                                                            return (
+                                                                <small className="text-muted ms-3" style={{ fontSize: '0.85rem' }}>
+                                                                    {`(${formatShort(range.start)} - ${formatShort(range.end)})`}
+                                                                </small>
+                                                            );
+                                                        })()}
+                                                    </h6>
                                                 <div className="table-responsive">
                                                     <table className="table table-bordered table-hover" style={{ fontSize: '0.85rem' }}>
                                                         <thead className="table-light">
