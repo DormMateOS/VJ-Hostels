@@ -52,6 +52,12 @@ const handleLogout = async () => {
                 QR Scanner
               </Link>
               <Link 
+                to="/security/barcode-scanner" 
+                className={`nav-link ${isActive('/barcode-scanner') ? 'active' : ''}`}
+              >
+                ID Card Check-in
+              </Link>
+              <Link 
                 to="/security/passes" 
                 className={`nav-link ${isActive('/passes') ? 'active' : ''}`}
               >

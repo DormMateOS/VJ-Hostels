@@ -63,9 +63,9 @@ function App() {
           <Route 
             path="/security/*" 
             element={
-              <ProtectedRoute allowedRoles={['security', 'guard']}>
+              // <ProtectedRoute allowedRoles={['security', 'guard']}>
                 <SecurityPage />
-              </ProtectedRoute>
+              // </ProtectedRoute>
             } 
           />
           

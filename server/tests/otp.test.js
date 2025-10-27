@@ -19,7 +19,7 @@ describe('OTP API Tests', () => {
 
   beforeAll(async () => {
     // Connect to test database
-    const mongoUri = process.env.MONGO_TEST_URI || 'mongodb://localhost:27017/hostel-otp-test';
+    const mongoUri = process.env.DBURL || 'mongodb://localhost:27017/hostel-otp-test';
     await mongoose.connect(mongoUri);
   });
 

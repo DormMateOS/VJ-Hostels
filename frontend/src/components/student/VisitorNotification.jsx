@@ -11,7 +11,7 @@ const VisitorNotification = () => {
   useEffect(() => {
     if (user) {
       // Initialize Socket.IO connection
-      const socketConnection = io('http://localhost:4000');
+      const socketConnection = io(import.meta.env.VITE_SERVER_URL);
       setSocket(socketConnection);
 
       // Listen for new OTP notifications

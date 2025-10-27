@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
 
 async function fixGuardUsernameIndex() {
   try {
-    const mongoUri = process.env.DBURL || process.env.MONGO_URI || process.env.MONGODB_URI;
+    const mongoUri = process.env.DBURL;
     if (!mongoUri) {
       throw new Error('Database URI not found in environment variables (DBURL, MONGO_URI, or MONGODB_URI)');
     }

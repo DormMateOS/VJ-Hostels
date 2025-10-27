@@ -4,7 +4,7 @@ import { Eye, Users, Clock, Calendar, Search, Filter, Download, AlertCircle } fr
 import {FiRefreshCcw} from 'react-icons/fi';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:4000'; // Add this at the top
+const API_BASE_URL = import.meta.env.VITE_SERVER_URL; // Add this at the top
 
 const Visitors = () => {
   const [activeVisitors, setActiveVisitors] = useState([]);

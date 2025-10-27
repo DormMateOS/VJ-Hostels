@@ -7,6 +7,7 @@ import Home from '../components/student/HomePage';
 import Attendance from '../components/security/Attendance';
 import SecurityDashboard from '../components/security/SecurityDashboard';
 import QRScanner from '../components/security/QRScanner';
+import BarcodeScanner from '../components/security/BarcodeScanner';
 import ActivePasses from '../components/security/ActivePasses';
 
 function SecurityPage() {
@@ -17,6 +18,7 @@ function SecurityPage() {
           {/* <Route index element={<SecurityDashboard />} /> */}
           <Route index element ={<Home/>} /> 
           <Route path="scanner" element={<QRScanner />} />
+          <Route path="barcode-scanner" element={<BarcodeScanner />} />
           <Route path="passes" element={<ActivePasses />} />
           <Route path="visitors" element={<VisitorManagement />} />
           <Route path="attendance" element={<Attendance/>} />

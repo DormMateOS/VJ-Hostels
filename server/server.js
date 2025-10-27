@@ -12,6 +12,7 @@ require('./config/passport');
 
 const authRoutes = require('./routes/authRoutes');
 const securityRoutes = require('./routes/securityRoutes');
+const barcodeRoutes = require('./routes/barcodeRoutes');
 
 const adminApp = require('./APIs/adminAPI');
 const studentApp = require('./APIs/studentAPI');
@@ -24,7 +25,7 @@ const otpRoutes = require('./routes/otpRoutes');
 
 // middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3101'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3101', 'http://localhost:6201', 'http://localhost:4000'],
   credentials: true,
 }));
 
@@ -53,6 +54,7 @@ app.use('/api/admin/visitors', adminVisitorApp);
 app.use('/outpass-api', outpassApp);
 app.use('/api/otp', otpRoutes);
 app.use('/security-api', securityRoutes);
+app.use('/barcode-api', barcodeRoutes);
 // app.use('/complaint-api',complaintApp);
 app.use('/auth', authRoutes);
 
