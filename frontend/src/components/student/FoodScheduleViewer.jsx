@@ -59,10 +59,19 @@ const FoodScheduleViewer = () => {
 
     const fetchFoodSchedule = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/weekly-schedule`);
+            const res = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/weekly-schedule-structured`);
+            console.log('[FOOD SCHEDULE] API Response:', res.data);
             setFoodSchedule(res.data);
         } catch (err) {
-            console.error(err);
+            console.error('[FOOD SCHEDULE] Error:', err);
+            // Fallback to the original endpoint if the new one fails
+            try {
+                const fallbackRes = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/weekly-schedule`);
+                console.log('[FOOD SCHEDULE] Fallback API Response:', fallbackRes.data);
+                setFoodSchedule(fallbackRes.data);
+            } catch (fallbackErr) {
+                console.error('[FOOD SCHEDULE] Fallback Error:', fallbackErr);
+            }
         } finally {
             setLoading(false);
         }
@@ -70,31 +79,42 @@ const FoodScheduleViewer = () => {
 
     const generateWeekDates = () => {
         const today = new Date();
+        
+        // Generate 7 dates starting from today (next 7 days)
         const dates = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(today);
             d.setDate(today.getDate() + i);
             return d.toISOString().split('T')[0];
         });
         setWeekDates(dates);
+        
+        // Set selected date to today (first date in the array)
         setSelectedDate(dates[0]);
     };
 
     const getMealsForDate = (dateString) => {
-        const allMeals = ['breakfast', 'lunch', 'snacks', 'dinner'];
-        if (!studentStatus?.pause_from) return allMeals;
+        // Weekly schedule always shows all 4 meals - this is a schedule viewer, not a pause manager
+        return ['breakfast', 'lunch', 'snacks', 'dinner'];
+    };
 
-        const { pause_from, resume_from, pause_meals, resume_meals } = studentStatus;
+    const getMealStatusForDate = (dateString) => {
+        // Simplified status check - only for minimal visual indication
+        if (!studentStatus?.pause_from) return { isPaused: false, pausedMeals: [] };
 
-        if (dateString < pause_from) return allMeals;
-        if (dateString === pause_from) return pause_meals?.split(',') || [];
-        if (resume_from && dateString > pause_from && dateString < resume_from) return [];
-        if (resume_from && dateString === resume_from) return resume_meals?.split(',') || [];
-        if (resume_from && dateString > resume_from) return allMeals;
-        return [];
+        const { pause_from, resume_from, pause_meals } = studentStatus;
+
+        // Only show pause status for the exact pause date to minimize confusion
+        if (dateString === pause_from) {
+            const pausedMealsList = pause_meals?.split(',').map(m => m.trim()) || [];
+            return { isPaused: pausedMealsList.length > 0, pausedMeals: pausedMealsList };
+        }
+        
+        return { isPaused: false, pausedMeals: [] };
     };
 
     const getMenuForDate = (dateString) => {
-        return foodSchedule.find(item => item.date === dateString) || null;
+        // foodSchedule contains menu objects with dateStr field matching our date format
+        return foodSchedule.find(item => item.dateStr === dateString || item.date === dateString) || null;
     };
 
     const formatDate = (dateString) => {
@@ -139,10 +159,10 @@ const FoodScheduleViewer = () => {
             snacks: '#b45309',
             dinner: '#4c1d95'
         };
-    return colors[meal] || '#3b82f6';
+        return colors[meal] || '#3b82f6';
     };
 
-        if (userLoading || loading || !user) {
+    if (userLoading || loading || !user) {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
                 <div className="text-center">
@@ -157,7 +177,17 @@ const FoodScheduleViewer = () => {
 
     const dayMenu = getMenuForDate(selectedDate);
     const meals = getMealsForDate(selectedDate);
+    const mealStatus = getMealStatusForDate(selectedDate);
     const todayStr = new Date().toISOString().split('T')[0];
+    
+    console.log('[FOOD SCHEDULE] Debug info:', {
+        selectedDate,
+        dayMenu,
+        meals,
+        mealStatus,
+        foodScheduleLength: foodSchedule.length,
+        foodSchedule: foodSchedule.slice(0, 3) // Show first 3 items for debugging
+    });
 
     return (
         <div className="weekly-schedule-root" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '2rem' }}>
@@ -217,44 +247,44 @@ const FoodScheduleViewer = () => {
                             {/* Desktop stacked dates (hidden on small screens via CSS) */}
                             <div className="desktop-date-stack d-flex flex-column gap-2">
                                 {weekDates.map(date => {
-                                        const isToday = date === todayStr;
-                                        const isSelected = date === selectedDate;
-                                        return (
-                                            <button
-                                                key={date}
-                                                className="btn text-start border position-relative"
-                                                onClick={() => setSelectedDate(date)}
-                                                style={{
-                                                    backgroundColor: isSelected ? '#3b82f6' : '#ffffff',
-                                                    color: isSelected ? '#ffffff' : '#334155',
-                                                    borderColor: isSelected ? '#3b82f6' : '#e2e8f0',
-                                                    padding: '0.9rem 0.9rem',
-                                                    borderRadius: '10px',
-                                                    transition: 'all 0.15s ease',
-                                                    fontWeight: isSelected ? '600' : '500',
-                                                    borderWidth: '2px',
-                                                    minWidth: 'unset'
-                                                }}
-                                            >
-                                                <div className="d-flex align-items-center justify-content-between">
-                                                    <div className="d-flex align-items-center gap-3">
-                                                        <div className="text-center" style={{ minWidth: '40px' }}>
-                                                            <div style={{ fontSize: '1.25rem', fontWeight: '700', lineHeight: 1 }}>{getDayOfMonth(date)}</div>
-                                                            <div style={{ fontSize: '0.65rem', opacity: 0.75, marginTop: '2px' }}>{getMonthShort(date)}</div>
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ fontSize: '0.95rem', fontWeight: '600' }}>{getDayOfWeek(date)}</div>
-                                                            {isToday && (
-                                                                <div style={{ fontSize: '0.65rem', fontWeight: '600', opacity: 0.8, marginTop: '2px' }}>TODAY</div>
-                                                            )}
-                                                        </div>
+                                    const isToday = date === todayStr;
+                                    const isSelected = date === selectedDate;
+                                    return (
+                                        <button
+                                            key={date}
+                                            className="btn text-start border position-relative"
+                                            onClick={() => setSelectedDate(date)}
+                                            style={{
+                                                backgroundColor: isSelected ? '#3b82f6' : '#ffffff',
+                                                color: isSelected ? '#ffffff' : '#334155',
+                                                borderColor: isSelected ? '#3b82f6' : '#e2e8f0',
+                                                padding: '0.9rem 0.9rem',
+                                                borderRadius: '10px',
+                                                transition: 'all 0.15s ease',
+                                                fontWeight: isSelected ? '600' : '500',
+                                                borderWidth: '2px',
+                                                minWidth: 'unset'
+                                            }}
+                                        >
+                                            <div className="d-flex align-items-center justify-content-between">
+                                                <div className="d-flex align-items-center gap-3">
+                                                    <div className="text-center" style={{ minWidth: '40px' }}>
+                                                        <div style={{ fontSize: '1.25rem', fontWeight: '700', lineHeight: 1 }}>{getDayOfMonth(date)}</div>
+                                                        <div style={{ fontSize: '0.65rem', opacity: 0.75, marginTop: '2px' }}>{getMonthShort(date)}</div>
                                                     </div>
-                                                    {isSelected && <div style={{ fontSize: '1.35rem', color: '#3b82f6', fontWeight: 700 }}>→</div>}
+                                                    <div>
+                                                        <div style={{ fontSize: '0.95rem', fontWeight: '600' }}>{getDayOfWeek(date)}</div>
+                                                        {isToday && (
+                                                            <div style={{ fontSize: '0.65rem', fontWeight: '600', opacity: 0.8, marginTop: '2px' }}>TODAY</div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                                                {isSelected && <div style={{ fontSize: '1.35rem', color: '#3b82f6', fontWeight: 700 }}>→</div>}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
@@ -288,9 +318,11 @@ const FoodScheduleViewer = () => {
                                 </div>
                             </div>
 
-                            {meals.length > 0 && dayMenu ? (
+                            {meals.length > 0 ? (
                                 <div className="row g-3">
-                                    {meals.map(meal => (
+                                    {meals.map(meal => {
+                                        const isMealPaused = mealStatus.pausedMeals.includes(meal);
+                                        return (
                                         <div key={meal} className="col-12 col-xl-6">
                                             <div 
                                                 className="h-100 border"
@@ -329,8 +361,16 @@ const FoodScheduleViewer = () => {
                                                             {getMealIcon(meal)}
                                                         </div>
                                                         <div>
-                                                            <h5 className="mb-1 fw-bold text-capitalize" style={{ fontSize: '1.1rem', color: getMealColor(meal) }}>
+                                                            <h5 className="mb-1 fw-bold text-capitalize" style={{ 
+                                                                fontSize: '1.1rem', 
+                                                                color: getMealColor(meal)
+                                                            }}>
                                                                 {meal}
+                                                                {isMealPaused && (
+                                                                    <small className="ms-2 badge bg-warning text-dark" style={{ fontSize: '0.6rem' }}>
+                                                                        Paused
+                                                                    </small>
+                                                                )}
                                                             </h5>
                                                             <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
                                                                 {getMealTime(meal)}
@@ -350,11 +390,11 @@ const FoodScheduleViewer = () => {
                                                         border: '1px solid #e2e8f0'
                                                     }}
                                                 >
-                                                    {dayMenu[meal] || 'No menu available'}
+                                                    {(dayMenu && dayMenu[meal]) || 'Menu will be updated soon'}
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                    )})}
                                 </div>
                             ) : (
                                 <div className="text-center py-5" style={{ marginTop: '4rem' }}>
