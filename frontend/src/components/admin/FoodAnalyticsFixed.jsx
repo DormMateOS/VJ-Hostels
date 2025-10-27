@@ -78,16 +78,11 @@ const FoodAnalytics = () => {
 
     // Initialize with default data
     useEffect(() => {
-        console.log('[UseEffect] Initializing analytics component');
         setAnalyticsData(getDefaultAnalyticsData());
-        console.log('[UseEffect] Default analytics data set');
     }, []);
 
     // Fetch data when filters change
     useEffect(() => {
-        console.log('[UseEffect] Filters or token changed');
-        console.log('[UseEffect] Filters:', filters);
-        console.log('[UseEffect] Token present:', !!token);
         if (token) {
             console.log('[UseEffect] Triggering fetchAnalyticsData');
             fetchAnalyticsData();
@@ -107,13 +102,6 @@ const FoodAnalytics = () => {
             const queryParams = new URLSearchParams(filters).toString();
             const fullUrl = `${import.meta.env.VITE_SERVER_URL}/food-api/analytics/dashboard-data?${queryParams}`;
             
-            console.log('========== ANALYTICS DATA FETCH START ==========');
-            console.log('[Filters] Current filters:', filters);
-            console.log('[Query] Query params string:', queryParams);
-            console.log('[URL] Full request URL:', fullUrl);
-            console.log('[Auth] Token present:', !!token);
-            console.log('[Server] VITE_SERVER_URL:', import.meta.env.VITE_SERVER_URL);
-            
             const response = await axios.get(fullUrl, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -121,37 +109,18 @@ const FoodAnalytics = () => {
                 }
             });
             
-            console.log('[Response] HTTP Status:', response.status);
-            console.log('[Response] Full response object:', response.data);
-            console.log('[Response] response.data.success:', response.data?.success);
-            console.log('[Response] response.data.data type:', typeof response.data?.data);
-            console.log('[Response] response.data.data keys:', Object.keys(response.data?.data || {}));
-            
-            if (response.data?.data) {
-                console.log('[DATA] Extracted analytics data successfully');
-                console.log('[DATA] Summary:', response.data.data.summary);
-                console.log('[DATA] Trends daily length:', response.data.data.trends?.daily?.length || 0);
-                console.log('[DATA] Trends daily sample:', response.data.data.trends?.daily?.[0]);
-                console.log('[DATA] Meal types keys:', Object.keys(response.data.data.distributions?.mealTypes || {}));
-                console.log('[DATA] Weekdays keys:', Object.keys(response.data.data.distributions?.weekdays || {}));
-                console.log('[DATA] Insights count:', response.data.data.insights?.length || 0);
-                
+            if (response.data?.data) {                
                 setAnalyticsData(response.data.data);
-                console.log('[State] ✓ Analytics data state updated successfully');
             } else {
-                console.warn('[DATA] response.data.data is undefined or null');
                 console.log('[DATA] Available keys in response.data:', Object.keys(response.data || {}));
                 
                 if (response.data?.success) {
                     console.log('[Fallback] Response successful, attempting alternative structure');
                     setAnalyticsData(response.data);
                 } else {
-                    console.warn('[Fallback] No success flag in response');
-                    console.log('[Fallback] Using default analytics data');
                     setAnalyticsData(getDefaultAnalyticsData());
                 }
             }
-            console.log('========== ANALYTICS DATA FETCH END (SUCCESS) ==========\n');
         } catch (error) {
             console.error('========== ANALYTICS DATA FETCH ERROR ==========');
             console.error('[Error] Error type:', error.constructor.name);
@@ -512,13 +481,13 @@ const FoodAnalytics = () => {
                                 <i className="bi bi-file-pdf me-2"></i>
                                 Export PDF
                             </button>
-                            <button
+                            {/* <button
                                 className="btn btn-info"
                                 onClick={handleExportPowerPoint}
                             >
                                 <i className="bi bi-file-ppt me-2"></i>
                                 Export PPT
-                            </button>
+                            </button> */}
                         </div>
                     </div>
                 </div>

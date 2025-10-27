@@ -12,7 +12,6 @@ require('./config/passport');
 
 const authRoutes = require('./routes/authRoutes');
 const securityRoutes = require('./routes/securityRoutes');
-const barcodeRoutes = require('./routes/barcodeRoutes');
 
 const adminApp = require('./APIs/adminAPI');
 const studentApp = require('./APIs/studentAPI');
@@ -24,9 +23,18 @@ const otpRoutes = require('./routes/otpRoutes');
 // const complaintApp = require('./APIs/complaintAPI');
 
 // middleware
+// CORS Configuration - Allow frontend origin with credentials support
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3101', 'http://localhost:6201', 'http://localhost:4000'],
-  credentials: true,
+  origin: [
+    'http://localhost:5173',  // Default Vite port
+    'http://localhost:5174',  // Alternative Vite port
+    'http://localhost:3101',  // Previous frontend port
+    'http://localhost:3201',  // Current frontend port (React on 3201)
+  ],
+  credentials: true, // Allow cookies and authorization headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Allowed HTTP methods
+  allowedHeaders: ['Content-Type', 'Authorization'], // Allowed request headers
+  exposedHeaders: ['set-cookie'], // Expose cookies to frontend
 }));
 
 // body parser middleware
@@ -54,7 +62,6 @@ app.use('/api/admin/visitors', adminVisitorApp);
 app.use('/outpass-api', outpassApp);
 app.use('/api/otp', otpRoutes);
 app.use('/security-api', securityRoutes);
-app.use('/barcode-api', barcodeRoutes);
 // app.use('/complaint-api',complaintApp);
 app.use('/auth', authRoutes);
 
@@ -96,7 +103,7 @@ io.on('connection', (socket) => {
 
             // Broadcast message to all clients in the room
             io.to('community').emit('newMessage', newMessage);
-            console.log(`Message broadcasted to community room`);
+            console.log('Message broadcasted to community room');
         } catch (error) {
             console.error('Error saving message:', error);
         }
@@ -114,7 +121,7 @@ io.on('connection', (socket) => {
 
             // Broadcast message to all clients in the room
             io.to('community').emit('newMessage', newMessage);
-            console.log(`Image message broadcasted to community room`);
+            console.log('Image message broadcasted to community room');
         } catch (error) {
             console.error('Error saving image message:', error);
         }

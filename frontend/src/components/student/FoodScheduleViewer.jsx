@@ -84,7 +84,11 @@ const FoodScheduleViewer = () => {
         const dates = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(today);
             d.setDate(today.getDate() + i);
-            return d.toISOString().split('T')[0];
+            // Format as YYYY-MM-DD in local timezone (not UTC)
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const date = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${date}`;
         });
         setWeekDates(dates);
         
@@ -119,8 +123,21 @@ const FoodScheduleViewer = () => {
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        const todayStr = new Date().toISOString().split('T')[0];
-        const tomorrowStr = new Date(Date.now() + 24*60*60*1000).toISOString().split('T')[0];
+        
+        // Get today's date in local timezone (not UTC)
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+        
+        // Get tomorrow's date in local timezone
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowYear = tomorrow.getFullYear();
+        const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0');
+        const tomorrowStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`;
 
         if (dateString === todayStr) return 'Today';
         if (dateString === tomorrowStr) return 'Tomorrow';
@@ -178,7 +195,13 @@ const FoodScheduleViewer = () => {
     const dayMenu = getMenuForDate(selectedDate);
     const meals = getMealsForDate(selectedDate);
     const mealStatus = getMealStatusForDate(selectedDate);
-    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Get today's date in local timezone (not UTC)
+    const todayDate = new Date();
+    const todayYear = todayDate.getFullYear();
+    const todayMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
+    const todayDay = String(todayDate.getDate()).padStart(2, '0');
+    const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
     
     console.log('[FOOD SCHEDULE] Debug info:', {
         selectedDate,
