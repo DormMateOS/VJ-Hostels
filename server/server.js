@@ -152,13 +152,13 @@ server.listen(port, () => {
     .then(() => {
         console.log("MongoDB connection successful!");
             // Start scheduled jobs that depend on DB
-            try {
-                const { scheduleDailyCleanup } = require('./jobs/foodPauseCleanup');
-                scheduleDailyCleanup();
-                console.log('Scheduled food pause cleanup job started');
-            } catch (err) {
-                console.error('Failed to start scheduled jobs:', err);
-            }
+            // try {
+            //     const { scheduleDailyCleanup } = require('./jobs/foodPauseCleanup');
+            //     scheduleDailyCleanup();
+            //     console.log('Scheduled food pause cleanup job started');
+            // } catch (err) {
+            //     console.error('Failed to start scheduled jobs:', err);
+            // }
     })
     .catch(err => {
         console.error("Error in DB connection:", err);

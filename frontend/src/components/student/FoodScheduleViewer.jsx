@@ -202,15 +202,6 @@ const FoodScheduleViewer = () => {
     const todayMonth = String(todayDate.getMonth() + 1).padStart(2, '0');
     const todayDay = String(todayDate.getDate()).padStart(2, '0');
     const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
-    
-    console.log('[FOOD SCHEDULE] Debug info:', {
-        selectedDate,
-        dayMenu,
-        meals,
-        mealStatus,
-        foodScheduleLength: foodSchedule.length,
-        foodSchedule: foodSchedule.slice(0, 3) // Show first 3 items for debugging
-    });
 
     return (
         <div className="weekly-schedule-root" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', padding: '2rem' }}>

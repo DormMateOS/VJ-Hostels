@@ -236,6 +236,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                             <button
                                 className={`nav-link ${activeTab === 'pause' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('pause')}
+                                style={{ color: activeTab === 'pause' ? '#0c63e4' : '#333' }}
                             >
                                 <i className="bi bi-plus-circle me-2"></i>
                                 Pause Meals
@@ -245,6 +246,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                             <button
                                 className={`nav-link ${activeTab === 'manage' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('manage')}
+                                style={{ color: activeTab === 'manage' ? '#0c63e4' : '#333' }}
                             >
                                 <i className="bi bi-list-check me-2"></i>
                                 My Paused Meals

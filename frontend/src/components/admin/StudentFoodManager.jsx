@@ -101,6 +101,7 @@ const StudentFoodManager = () => {
                             <button
                                 className={`nav-link ${activeTab === 'overview' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('overview')}
+                                style={{ color: activeTab === 'overview' ? '#0c63e4' : '#333' }}
                             >
                                 <i className="bi bi-speedometer2 me-2"></i>
                                 Overview
@@ -110,6 +111,7 @@ const StudentFoodManager = () => {
                             <button
                                 className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('analytics')}
+                                style={{ color: activeTab === 'analytics' ? '#0c63e4' : '#333' }}
                             >
                                 <i className="bi bi-graph-up me-2"></i>
                                 Analytics Dashboard

@@ -103,15 +103,18 @@ h1, h2, h3, h4, h5, h6 {
   color: #f3f4f6;
   height: 100vh;
   width: 200px;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
   box-shadow: 2px 0 8px rgba(0,0,0,0.1);
   position: relative;
+  overflow: visible;
 }
 
 .admin-sidebar.closed {
   width: 80px;
+  min-width: 80px;
 }
 
 /* Sidebar header */
@@ -121,6 +124,7 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .sidebar-title {
@@ -138,6 +142,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.25rem;
   cursor: pointer;
   transition: color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .toggle-btn:hover {
@@ -145,19 +150,67 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Nav List */
+.sidebar-nav-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.sidebar-nav-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.sidebar-nav-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
 .sidebar-nav {
   flex-grow: 1;
   overflow-y: auto;
   padding-left: 0;
   margin-top: 1rem;
   list-style: none;
+  padding: 0 0.5rem;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Nav links */
 .nav-link {
   display: flex;
   align-items: center;
-  padding: 0.55rem 1rem;
+  justify-content: flex-start;
+  padding: 0.7rem 0.8rem;
+  margin: 0.3rem 0.5rem;
   color: #9ca3af;
   font-weight: 500;
   font-size: 0.9rem;
@@ -167,6 +220,9 @@ h1, h2, h3, h4, h5, h6 {
   white-space: nowrap;
   user-select: none;
   border-radius: 4px;
+  gap: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-link:hover {
@@ -175,18 +231,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .nav-link.active {
-  color: #3b82f6;
-  border-left-color: #3b82f6;
-  background-color: #1e40af22;
+  color: #f3f4f6;
+  border-left-color: transparent;
+  background-color: transparent;
   font-weight: 600;
 }
 
 /* Icons */
 .icon {
   font-size: 1.1rem;
-  margin-right: 1rem;
   color: inherit;
   flex-shrink: 0;
+}
+
+.nav-item {
+  margin: 0;
 }
 
 /* Hide labels when closed */
@@ -194,16 +253,19 @@ h1, h2, h3, h4, h5, h6 {
   display: none;
 }
 
+.admin-sidebar.closed .nav-link span {
+  display: none;
+}
+
 /* Logout container - sticky bottom */
 .logout-container {
   padding: 0.8rem 1rem;
   border-top: 1px solid #374151;
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   background-color: #1f2937;
   width: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 /* Logout button */
@@ -213,14 +275,18 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   cursor: pointer;
   border-left: 3px solid transparent;
-  padding: 0.55rem 0;
+  padding: 0.7rem 1rem;
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 0.75rem;
   background: transparent;
   border-radius: 4px;
   transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
   user-select: none;
+  border: none;
+  text-decoration: none;
+  font-size: 0.9rem;
 }
 
 .logout-btn:hover {
@@ -232,15 +298,13 @@ h1, h2, h3, h4, h5, h6 {
 /* Logout icon when closed */
 .admin-sidebar.closed .logout-btn {
   justify-content: center;
-  padding: 0.55rem 0;
+  padding: 0.7rem 1rem;
   border-left: none;
   border-radius: 0;
 }
 
-.admin-sidebar.closed .logout-btn .icon {
-  font-size: 1.4rem;
+.admin-sidebar.closed .logout-btn i {
   margin-right: 0;
-  color: #ef4444;
 }
 
 /* Header */
