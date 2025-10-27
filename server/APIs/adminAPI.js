@@ -1333,4 +1333,228 @@ adminApp.get('/dashboard-stats', verifyAdmin, expressAsyncHandler(async (req, re
     }
 }));
 
+// Get enhanced dashboard statistics with comprehensive data
+adminApp.get('/dashboard-stats-enhanced', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        // Basic counts
+        const totalStudents = await Student.countDocuments({ is_active: true });
+        const totalAnnouncements = await Announcement.countDocuments();
+        const pendingOutpassesCount = await Outpass.countDocuments({ status: 'pending' });
+        const activeComplaintsCount = await Complaint.countDocuments({ status: 'active' });
+
+        // Room occupancy (with error handling)
+        let totalRooms = 0;
+        let occupiedRooms = 0;
+        
+        try {
+            totalRooms = await Room.countDocuments();
+            // Check if rooms have occupants array or individual student fields
+            const sampleRoom = await Room.findOne();
+            if (sampleRoom && sampleRoom.occupants) {
+                // Using occupants array
+                occupiedRooms = await Room.countDocuments({ 
+                    occupants: { $exists: true, $not: { $size: 0 } }
+                });
+            } else {
+                // Using individual student fields
+                occupiedRooms = await Room.countDocuments({ 
+                    $or: [
+                        { student1: { $ne: null } },
+                        { student2: { $ne: null } },
+                        { student3: { $ne: null } }
+                    ]
+                });
+            }
+        } catch (error) {
+            console.log('Room occupancy calculation error:', error.message);
+        }
+
+        // Food management stats (with error handling)
+        let todayMealPauses = 0;
+        let mealPauses = {
+            breakfast: 0,
+            lunch: 0,
+            snacks: 0,
+            dinner: 0
+        };
+        let foodFeedbackCount = 0;
+        let averageFoodRating = 0;
+
+        try {
+            const { FoodPause, FoodFeedback } = require('../models/FoodModel');
+            
+            // Today's meal pauses
+            todayMealPauses = await FoodPause.countDocuments({
+                pause_from: { $lte: today },
+                $or: [
+                    { resume_from: { $gte: tomorrow } },
+                    { resume_from: null }
+                ]
+            });
+
+            const todayPauses = await FoodPause.find({
+                pause_from: { $lte: today },
+                $or: [
+                    { resume_from: { $gte: tomorrow } },
+                    { resume_from: null }
+                ]
+            });
+
+            todayPauses.forEach(pause => {
+                if (pause.pause_meals) {
+                    const meals = pause.pause_meals.split(',').map(m => m.trim());
+                    meals.forEach(meal => {
+                        if (mealPauses.hasOwnProperty(meal)) {
+                            mealPauses[meal]++;
+                        }
+                    });
+                }
+            });
+
+            // Food feedback stats
+            foodFeedbackCount = await FoodFeedback.countDocuments({
+                createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+            });
+
+            const feedbackAggregation = await FoodFeedback.aggregate([
+                {
+                    $match: {
+                        createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        averageRating: { $avg: '$rating' }
+                    }
+                }
+            ]);
+
+            averageFoodRating = feedbackAggregation.length > 0 
+                ? Math.round(feedbackAggregation[0].averageRating * 10) / 10 
+                : 0;
+        } catch (error) {
+            console.log('Food models not found, using default values:', error.message);
+        }
+
+        // Outpass detailed stats (with error handling)
+        let outpassTypes = { late: 0, home: 0 };
+        let studentsCurrentlyOut = 0;
+        let overdueReturns = 0;
+
+        try {
+            outpassTypes = {
+                late: await Outpass.countDocuments({ 
+                    type: 'late', 
+                    createdAt: { $gte: today, $lt: tomorrow } 
+                }),
+                home: await Outpass.countDocuments({ 
+                    type: 'home', 
+                    createdAt: { $gte: today, $lt: tomorrow } 
+                })
+            };
+
+            // Students currently out (approved outpasses where current time is between outTime and inTime)
+            const now = new Date();
+            studentsCurrentlyOut = await Outpass.countDocuments({
+                status: 'accepted',
+                outTime: { $lte: now },
+                inTime: { $gte: now }
+            });
+
+            // Overdue returns (students who should have returned but haven't)
+            overdueReturns = await Outpass.countDocuments({
+                status: 'accepted',
+                inTime: { $lt: now },
+                actualInTime: null // Assuming actualInTime is set when student returns
+            });
+        } catch (error) {
+            console.log('Outpass stats calculation error:', error.message);
+        }
+
+        // Visitor management stats (if visitor model exists)
+        let visitorsToday = 0;
+        let visitorsInside = 0;
+        let visitorsCheckedOut = 0;
+        let visitorsThisMonth = 0;
+
+        try {
+            const Visitor = require('../models/VisitorModel');
+            
+            visitorsToday = await Visitor.countDocuments({
+                checkInTime: { $gte: today, $lt: tomorrow }
+            });
+
+            visitorsInside = await Visitor.countDocuments({
+                checkInTime: { $gte: today },
+                checkOutTime: null
+            });
+
+            visitorsCheckedOut = await Visitor.countDocuments({
+                checkInTime: { $gte: today, $lt: tomorrow },
+                checkOutTime: { $ne: null }
+            });
+
+            visitorsThisMonth = await Visitor.countDocuments({
+                checkInTime: { $gte: startOfMonth, $lte: endOfMonth }
+            });
+        } catch (error) {
+            console.log('Visitor model not found, using default values');
+        }
+
+        // Recent activities
+        const recentComplaints = await Complaint.find()
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        const recentOutpasses = await Outpass.find()
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        res.status(200).json({
+            // Basic stats
+            totalStudents,
+            totalAnnouncements,
+            pendingOutpassesCount,
+            activeComplaintsCount,
+            
+            // Room stats
+            totalRooms,
+            occupiedRooms,
+            
+            // Food management
+            todayMealPauses,
+            mealPauses,
+            foodFeedbackCount,
+            averageFoodRating,
+            
+            // Outpass details
+            outpassTypes,
+            studentsCurrentlyOut,
+            overdueReturns,
+            
+            // Visitor management
+            visitorsToday,
+            visitorsInside,
+            visitorsCheckedOut,
+            visitorsThisMonth,
+            
+            // Recent activities
+            recentComplaints,
+            recentOutpasses
+        });
+    } catch (error) {
+        console.error('Enhanced dashboard stats error:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
 module.exports = adminApp;

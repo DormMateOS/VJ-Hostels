@@ -80,6 +80,12 @@ const Food = () => {
     const [feedback, setFeedback] = useState([]);
     const [feedbackStats, setFeedbackStats] = useState(null);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
+    const [feedbackFilters, setFeedbackFilters] = useState({
+        dateFilter: 'today',
+        customStartDate: '',
+        customEndDate: '',
+        mealType: 'all'
+    });
 
     // Derived feedback views computed from raw `feedback` (client-side)
     const getDateStr = (d) => new Date(d).toISOString().split('T')[0];
@@ -89,14 +95,15 @@ const Food = () => {
     // Today's date string
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Compute today's averages and rating distribution, plus recent 7-day trends
+    // Compute filtered period's averages and rating distribution, plus recent 7-day trends
     const {
         todayAvgByMeal,
         todayRatingDistribution,
         totalTodayReviews,
         recentTrendsFromFeedback,
         recentDates,
-        recentByDate
+        recentByDate,
+        filteredDates
     } = (() => {
         // Group reviews by date and meal
         const byDateMeal = {}; // { 'YYYY-MM-DD': { mealType: [ratings] } }
@@ -114,27 +121,85 @@ const Food = () => {
             byDateMeal[dateStr][f.mealType].push(Number(f.rating));
         });
 
-        // Today's averages
-        const todayAvg = {};
-        let totalToday = 0;
+        // Determine which dates to use for statistics based on filter
+        let datesForStats = [todayStr]; // default to today
+        if (feedbackFilters.dateFilter === 'yesterday') {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            datesForStats = [yesterday.toISOString().split('T')[0]];
+        } else if (feedbackFilters.dateFilter === 'thisWeek') {
+            const d = new Date();
+            const dayOfWeek = d.getDay();
+            datesForStats = [];
+            for (let i = dayOfWeek; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'lastWeek') {
+            const d = new Date();
+            const dayOfWeek = d.getDay();
+            datesForStats = [];
+            for (let i = dayOfWeek + 7; i >= dayOfWeek + 1; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'thisMonth') {
+            const d = new Date();
+            datesForStats = [];
+            for (let i = d.getDate(); i >= 1; i--) {
+                const date = new Date(d.getFullYear(), d.getMonth(), i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'lastMonth') {
+            const d = new Date();
+            const lastMonth = d.getMonth() - 1;
+            const year = lastMonth < 0 ? d.getFullYear() - 1 : d.getFullYear();
+            const month = lastMonth < 0 ? 11 : lastMonth;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            datesForStats = [];
+            for (let i = daysInMonth; i >= 1; i--) {
+                const date = new Date(year, month, i);
+                datesForStats.push(date.toISOString().split('T')[0]);
+            }
+        } else if (feedbackFilters.dateFilter === 'custom' && feedbackFilters.customStartDate && feedbackFilters.customEndDate) {
+            const start = new Date(feedbackFilters.customStartDate);
+            const end = new Date(feedbackFilters.customEndDate);
+            datesForStats = [];
+            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                datesForStats.push(d.toISOString().split('T')[0]);
+                if (datesForStats.length > 0 && datesForStats[datesForStats.length - 1] === end.toISOString().split('T')[0]) break;
+            }
+        }
+
+        // Calculate averages for filtered period
+        const filteredAvg = {};
+        let filteredTotal = 0;
         mealTypes.forEach(mt => {
-            const ratings = (byDateMeal[todayStr] && byDateMeal[todayStr][mt]) || [];
-            const count = ratings.length;
-            totalToday += count;
-            const avg = count ? ratings.reduce((a,b)=>a+b,0)/count : 0;
-            todayAvg[mt] = { averageRating: avg, count };
+            let allRatings = [];
+            datesForStats.forEach(dateStr => {
+                const ratings = (byDateMeal[dateStr] && byDateMeal[dateStr][mt]) || [];
+                allRatings = allRatings.concat(ratings);
+            });
+            const count = allRatings.length;
+            filteredTotal += count;
+            const avg = count ? allRatings.reduce((a,b)=>a+b,0)/count : 0;
+            filteredAvg[mt] = { averageRating: avg, count };
         });
 
-        // Today's rating distribution (1-5)
-        const ratingDist = [0,0,0,0,0]; // indices 0->1star ... 4->5star
-        if (byDateMeal[todayStr]) {
-            Object.values(byDateMeal[todayStr]).forEach(arr => {
-                arr.forEach(r => {
-                    const idx = Math.min(Math.max(Math.round(r) - 1, 0), 4);
-                    ratingDist[idx]++;
+        // Filtered period's rating distribution (1-5)
+        const filteredRatingDist = [0,0,0,0,0]; // indices 0->1star ... 4->5star
+        datesForStats.forEach(dateStr => {
+            if (byDateMeal[dateStr]) {
+                Object.values(byDateMeal[dateStr]).forEach(arr => {
+                    arr.forEach(r => {
+                        const idx = Math.min(Math.max(Math.round(r) - 1, 0), 4);
+                        filteredRatingDist[idx]++;
+                    });
                 });
-            });
-        }
+            }
+        });
 
         // Recent 7 days including today: generate date strings from oldest to newest
         const recentDates = [];
@@ -157,12 +222,13 @@ const Food = () => {
         });
 
         return {
-            todayAvgByMeal: todayAvg,
-            todayRatingDistribution: ratingDist,
-            totalTodayReviews: totalToday,
+            todayAvgByMeal: filteredAvg,
+            todayRatingDistribution: filteredRatingDist,
+            totalTodayReviews: filteredTotal,
             recentTrendsFromFeedback: recentTrends,
             recentDates,
-            recentByDate
+            recentByDate,
+            filteredDates: datesForStats
         };
     })();
 
@@ -175,6 +241,12 @@ const Food = () => {
             fetchFeedbackStats();
         }
     }, [activeTab, token]);
+
+    useEffect(() => {
+        if (activeTab === 'feedback') {
+            fetchFeedback();
+        }
+    }, [feedbackFilters]);
 
     const fetchMenus = async () => {
         try {
@@ -214,7 +286,8 @@ const Food = () => {
     const fetchFeedback = async () => {
         try {
             setFeedbackLoading(true);
-            const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/admin/feedback`, {
+            const queryParams = new URLSearchParams(feedbackFilters).toString();
+            const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/admin/feedback?${queryParams}`, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
@@ -225,6 +298,13 @@ const Food = () => {
         } finally {
             setFeedbackLoading(false);
         }
+    };
+
+    const handleFeedbackFilterChange = (key, value) => {
+        setFeedbackFilters(prev => ({
+            ...prev,
+            [key]: value
+        }));
     };
 
     const fetchFeedbackStats = async () => {
@@ -744,6 +824,76 @@ const Food = () => {
 
             {activeTab === 'feedback' && (
                 <div>
+                    {/* Feedback Filters */}
+                    <div className="card mb-4">
+                        <div className="card-header bg-primary text-white">
+                            <h5 className="mb-0">
+                                <i className="bi bi-funnel me-2"></i>
+                                Feedback Filters
+                            </h5>
+                        </div>
+                        <div className="card-body">
+                            <div className="row g-3">
+                                <div className="col-md-3">
+                                    <label className="form-label">Date Range</label>
+                                    <select
+                                        className="form-select"
+                                        value={feedbackFilters.dateFilter}
+                                        onChange={(e) => handleFeedbackFilterChange('dateFilter', e.target.value)}
+                                    >
+                                        <option value="today">Today</option>
+                                        <option value="yesterday">Yesterday</option>
+                                        <option value="thisWeek">This Week</option>
+                                        <option value="lastWeek">Last Week</option>
+                                        <option value="thisMonth">This Month</option>
+                                        <option value="lastMonth">Last Month</option>
+                                        <option value="thisYear">This Year</option>
+                                        <option value="lastYear">Last Year</option>
+                                        <option value="custom">Custom Range</option>
+                                    </select>
+                                </div>
+
+                                {feedbackFilters.dateFilter === 'custom' && (
+                                    <>
+                                        <div className="col-md-2">
+                                            <label className="form-label">Start Date</label>
+                                            <input
+                                                type="date"
+                                                className="form-control"
+                                                value={feedbackFilters.customStartDate}
+                                                onChange={(e) => handleFeedbackFilterChange('customStartDate', e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="col-md-2">
+                                            <label className="form-label">End Date</label>
+                                            <input
+                                                type="date"
+                                                className="form-control"
+                                                value={feedbackFilters.customEndDate}
+                                                onChange={(e) => handleFeedbackFilterChange('customEndDate', e.target.value)}
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div className="col-md-3">
+                                    <label className="form-label">Meal Type</label>
+                                    <select
+                                        className="form-select"
+                                        value={feedbackFilters.mealType}
+                                        onChange={(e) => handleFeedbackFilterChange('mealType', e.target.value)}
+                                    >
+                                        <option value="all">All Meals</option>
+                                        <option value="breakfast">Breakfast Only</option>
+                                        <option value="lunch">Lunch Only</option>
+                                        <option value="snacks">Snacks Only</option>
+                                        <option value="dinner">Dinner Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Feedback Statistics */}
                     <div className="row g-4 mb-4">
                         {mealTypes.map(mt => (
@@ -963,6 +1113,159 @@ const Food = () => {
                         </div>
                     )}
 
+                    {/* Additional Charts Row */}
+                    {feedbackStats && (
+                        <div className="row mb-4">
+                            <div className="col-md-6">
+                                <div className="card h-100">
+                                    <div className="card-header bg-light">
+                                        <h5 className="mb-0">Meal Type Comparison (Bar Chart)</h5>
+                                    </div>
+                                    <div className="card-body">
+                                        <div style={{ height: '300px' }}>
+                                            <Bar
+                                                data={{
+                                                    labels: mealTypes.map(mt => mt.charAt(0).toUpperCase() + mt.slice(1)),
+                                                    datasets: [
+                                                        {
+                                                            label: 'Average Rating',
+                                                            data: mealTypes.map(mt => todayAvgByMeal[mt].averageRating || 0),
+                                                            backgroundColor: [
+                                                                'rgba(255, 99, 132, 0.8)',
+                                                                'rgba(54, 162, 235, 0.8)',
+                                                                'rgba(255, 205, 86, 0.8)',
+                                                                'rgba(75, 192, 192, 0.8)'
+                                                            ],
+                                                            borderColor: [
+                                                                'rgb(255, 99, 132)',
+                                                                'rgb(54, 162, 235)',
+                                                                'rgb(255, 205, 86)',
+                                                                'rgb(75, 192, 192)'
+                                                            ],
+                                                            borderWidth: 1
+                                                        },
+                                                        {
+                                                            label: 'Review Count',
+                                                            data: mealTypes.map(mt => todayAvgByMeal[mt].count || 0),
+                                                            backgroundColor: 'rgba(153, 102, 255, 0.8)',
+                                                            borderColor: 'rgb(153, 102, 255)',
+                                                            borderWidth: 1,
+                                                            yAxisID: 'y1'
+                                                        }
+                                                    ]
+                                                }}
+                                                options={{
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    plugins: {
+                                                        legend: {
+                                                            position: 'top',
+                                                        },
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Ratings vs Review Count by Meal Type'
+                                                        }
+                                                    },
+                                                    scales: {
+                                                        y: {
+                                                            type: 'linear',
+                                                            display: true,
+                                                            position: 'left',
+                                                            min: 0,
+                                                            max: 5,
+                                                            title: {
+                                                                display: true,
+                                                                text: 'Average Rating'
+                                                            }
+                                                        },
+                                                        y1: {
+                                                            type: 'linear',
+                                                            display: true,
+                                                            position: 'right',
+                                                            min: 0,
+                                                            title: {
+                                                                display: true,
+                                                                text: 'Number of Reviews'
+                                                            },
+                                                            grid: {
+                                                                drawOnChartArea: false,
+                                                            },
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="card h-100">
+                                    <div className="card-header bg-light">
+                                        <h5 className="mb-0">Rating Histogram</h5>
+                                    </div>
+                                    <div className="card-body">
+                                        <div style={{ height: '300px' }}>
+                                            <Bar
+                                                data={{
+                                                    labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+                                                    datasets: [
+                                                        {
+                                                            label: 'Number of Reviews',
+                                                            data: todayRatingDistribution,
+                                                            backgroundColor: [
+                                                                'rgba(220, 53, 69, 0.8)',
+                                                                'rgba(253, 126, 20, 0.8)',
+                                                                'rgba(255, 193, 7, 0.8)',
+                                                                'rgba(13, 202, 240, 0.8)',
+                                                                'rgba(25, 135, 84, 0.8)'
+                                                            ],
+                                                            borderColor: [
+                                                                'rgb(220, 53, 69)',
+                                                                'rgb(253, 126, 20)',
+                                                                'rgb(255, 193, 7)',
+                                                                'rgb(13, 202, 240)',
+                                                                'rgb(25, 135, 84)'
+                                                            ],
+                                                            borderWidth: 1
+                                                        }
+                                                    ]
+                                                }}
+                                                options={{
+                                                    responsive: true,
+                                                    maintainAspectRatio: false,
+                                                    plugins: {
+                                                        legend: {
+                                                            display: false
+                                                        },
+                                                        title: {
+                                                            display: true,
+                                                            text: 'Distribution of Ratings'
+                                                        }
+                                                    },
+                                                    scales: {
+                                                        y: {
+                                                            beginAtZero: true,
+                                                            title: {
+                                                                display: true,
+                                                                text: 'Number of Reviews'
+                                                            }
+                                                        },
+                                                        x: {
+                                                            title: {
+                                                                display: true,
+                                                                text: 'Rating'
+                                                            }
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Feedback List */}
                     {/* <div className="card">
                         <div className="card-header bg-light">
@@ -1013,6 +1316,7 @@ const Food = () => {
                     </div> */}
                 </div>
             )}
+
 
             {activeTab === 'count' && (
                 <FoodCountManager />

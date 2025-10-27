@@ -38,28 +38,33 @@ router.get(
   (req, res, next) => {
     const role = req.params.role;
     passport.authenticate(`google-${role}`, (err, user, info) => {
-      if (err) {
-        console.error(`${role} authentication error:`, err);
-        return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
-      }
-
-      if (!user) {
-        console.log(`No ${role} user found or unauthorized email`);
-        return res.redirect(`${process.env.CLIENT_URL}/login?error=unauthorized`);
-      }
-
-      req.logIn(user, (err) => {
+        // Verbose logging for debugging auth failures
+        console.log(`Auth callback invoked for role=${role} - session.selectedRole=${req.session?.selectedRole || 'n/a'}`);
         if (err) {
-          console.error(`${role} login error:`, err);
-          return res.redirect(`${process.env.CLIENT_URL}/login?error=login_failed`);
+          console.error(`${role} authentication error:`, err);
+          if (info) console.error('Passport info:', info);
+          // Include minimal info in redirect (generic) and log details server-side
+          return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
         }
 
-        console.log(`Successful ${role} login for user:`, user);
-        const token = generateJwt(user, role);
+        if (!user) {
+          console.warn(`No ${role} user found or unauthorized email. Passport info:`, info);
+          return res.redirect(`${process.env.CLIENT_URL}/login?error=unauthorized`);
+        }
 
-        // Redirect to role-specific route
-        return res.redirect(`${process.env.CLIENT_URL}/?auth=success&token=${token}&role=${role}`);
-      });
+        req.logIn(user, (err) => {
+          if (err) {
+            console.error(`${role} login error:`, err);
+            if (err.stack) console.error(err.stack);
+            return res.redirect(`${process.env.CLIENT_URL}/login?error=login_failed`);
+          }
+
+          console.log(`Successful ${role} login for user:`, { id: user._id, email: user.email, role: user.role });
+          const token = generateJwt(user, role);
+
+          // Redirect to role-specific route with JWT
+          return res.redirect(`${process.env.CLIENT_URL}/?auth=success&token=${token}&role=${role}`);
+        });
     })(req, res, next);
   }
 );

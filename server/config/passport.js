@@ -4,6 +4,13 @@ const Student = require('../models/StudentModel.js');
 const Admin = require('../models/AdminModel.js');
 const Guard = require('../models/GuardModel.js');
 
+// Allow overriding institutional email check in development
+const ALLOW_NON_INSTITUTIONAL = process.env.ALLOW_NON_INSTITUTIONAL === 'true';
+function isInstitutionalEmail(email) {
+    if (ALLOW_NON_INSTITUTIONAL) return true;
+    return typeof email === 'string' && email.endsWith('@vnrvjiet.in');
+}
+
 // Student Google OAuth
 passport.use('google-student', new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -12,7 +19,8 @@ passport.use('google-student', new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const email = profile.emails[0].value;
-        if (!email.endsWith('@vnrvjiet.in')) {
+        if (!isInstitutionalEmail(email)) {
+            console.warn('Rejected student login due to email domain:', email);
             return done(null, false, { message: 'Only institutional emails allowed' });
         }
 
@@ -46,7 +54,8 @@ passport.use('google-admin', new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const email = profile.emails[0].value;
-        if (!email.endsWith('@vnrvjiet.in')) {
+        if (!isInstitutionalEmail(email)) {
+            console.warn('Rejected admin login due to email domain:', email);
             return done(null, false, { message: 'Only institutional emails allowed' });
         }
 
@@ -75,7 +84,8 @@ passport.use('google-security', new GoogleStrategy({
 }, async (accessToken, refreshToken, profile, done) => {
     try {
         const email = profile.emails[0].value;
-        if (!email.endsWith('@vnrvjiet.in')) {
+        if (!isInstitutionalEmail(email)) {
+            console.warn('Rejected security login due to email domain:', email);
             return done(null, false, { message: 'Only institutional emails allowed' });
         }
 

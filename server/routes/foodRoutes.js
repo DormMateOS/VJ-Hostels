@@ -6,6 +6,7 @@ const { calculateAndUpdateFoodCount } = require('../controllers/foodCountControl
 const { googleOAuth, getStudentsByHostel } = require('../controllers/studentFoodController');
 const { wardenLogin, wardenLoginUsingBcrypt } = require('../controllers/wardenFoodController');
 const { getMonthlyMenu, updateDayMenu, getCurrentWeek, updateWeekMenu } = require('../controllers/weeklyMenuController');
+const { getDashboardData, getExportData } = require('../controllers/foodAnalyticsControllerFixed');
 
 // Food pause/resume routes
 router.post('/pause', pauseFood);
@@ -28,5 +29,9 @@ router.get('/menu/monthly', getMonthlyMenu);
 router.put('/menu/day', updateDayMenu);
 router.get('/menu/current-week', getCurrentWeek);
 router.put('/menu/week', updateWeekMenu);
+
+// Analytics routes
+router.get('/analytics/dashboard-data', getDashboardData);
+router.get('/analytics/export-data', getExportData);
 
 module.exports = router;
