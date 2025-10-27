@@ -1,4 +1,5 @@
-const { WeeklyFoodMenu } = require('../models/FoodModel');
+const expressAsyncHandler = require('express-async-handler');
+const { FoodMenu, WeeklyFoodMenu } = require('../models/FoodModel');
 
 // Epoch for rotation (choose a Monday so week boundaries align). You can change this later.
 const ROTATION_EPOCH_UTC = new Date(Date.UTC(2025, 0, 6)); // 2025-01-06 (Monday)
@@ -12,74 +13,54 @@ function getRotationWeekIndex(date = new Date()) {
     return idx + 1; // 1..4
 }
 
-// Get template menu data (returns the 4 rotation templates)
-const getMonthlyMenu = async (req, res) => {
+/**
+ * Get template menu data (returns the 4 rotation templates)
+ */
+const getMonthlyMenu = expressAsyncHandler(async (req, res) => {
     try {
         // Fetch all 4 templates (week 1..4)
         const weeklyMenus = await WeeklyFoodMenu.find({}).sort({ week: 1 });
         
-        // Transform data to match frontend structure
-        const monthlyMenuData = {};
-        
-        weeklyMenus.forEach(weekMenu => {
-            monthlyMenuData[weekMenu.weekName] = weekMenu.days;
-        });
-        
-        // If no data found, return empty structure
-        if (Object.keys(monthlyMenuData).length === 0) {
-            const emptyWeekStructure = {
-                monday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
-                tuesday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
-                wednesday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
-                thursday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
-                friday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
-                saturday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
-                sunday: { breakfast: '', lunch: '', snacks: '', dinner: '' }
-            };
-            
-            for (let i = 1; i <= 4; i++) {
-                monthlyMenuData[`week${i}`] = { ...emptyWeekStructure };
-            }
-        }
-        
         res.status(200).json({
             success: true,
-            data: monthlyMenuData
+            data: weeklyMenus
         });
-        
     } catch (error) {
-        console.error('Error fetching monthly menu:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch monthly menu',
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
-};
+});
 
-// Update specific day's menu
-const updateDayMenu = async (req, res) => {
+/**
+ * Update day menu
+ */
+const updateDayMenu = expressAsyncHandler(async (req, res) => {
     try {
-        const { week, day, breakfast, lunch, snacks, dinner } = req.body;
+        const { date, week, day, breakfast, lunch, snacks, dinner } = req.body;
         
-        if (!week || !day) {
-            return res.status(400).json({
-                success: false,
-                message: 'Week and day are required'
-            });
+        let dateObj;
+        
+        // If date is provided, use it directly
+        if (date) {
+            dateObj = new Date(date);
+            dateObj.setHours(0, 0, 0, 0);
         }
-        
-        // Extract week number from week string (e.g., "week1" -> 1)
-        const weekNumber = parseInt(week.replace('week', ''));
-
-        // Find the weekly menu document (rotation template is yearless)
-        let weeklyMenu = await WeeklyFoodMenu.findOne({
-            week: weekNumber,
-            weekName: week
-        });
-        
-        // If document doesn't exist, create it
-        if (!weeklyMenu) {
+        // If week and day are provided, calculate the date from rotation
+        else if (week && day) {
+            // This is a template update for the weekly rotation
+            const weekNumber = parseInt(week.toString().replace('week', ''));
+            
+            if (!weekNumber || isNaN(weekNumber) || weekNumber < 1 || weekNumber > 4) {
+                return res.status(400).json({ success: false, error: 'Invalid week number' });
+            }
+            
+            const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            const dayLower = day.toString().toLowerCase();
+            
+            if (!validDays.includes(dayLower)) {
+                return res.status(400).json({ success: false, error: 'Invalid day' });
+            }
+            
+            // Update the weekly rotation template instead
             const emptyWeekStructure = {
                 monday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
                 tuesday: { breakfast: '', lunch: '', snacks: '', dinner: '' },
@@ -90,28 +71,52 @@ const updateDayMenu = async (req, res) => {
                 sunday: { breakfast: '', lunch: '', snacks: '', dinner: '' }
             };
             
-            weeklyMenu = new WeeklyFoodMenu({
-                week: weekNumber,
-                weekName: week,
-                days: emptyWeekStructure
+            let weeklyMenu = await WeeklyFoodMenu.findOne({
+                week: weekNumber
+            });
+            
+            if (!weeklyMenu) {
+                weeklyMenu = new WeeklyFoodMenu({
+                    week: weekNumber,
+                    days: emptyWeekStructure
+                });
+            }
+            
+            weeklyMenu.days[dayLower] = {
+                breakfast: breakfast || '',
+                lunch: lunch || '',
+                snacks: snacks || '',
+                dinner: dinner || ''
+            };
+            
+            await weeklyMenu.save();
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Menu template updated successfully',
+                data: weeklyMenu.days[dayLower]
             });
         }
+        else {
+            return res.status(400).json({ success: false, error: 'Either date or (week and day) are required' });
+        }
         
-        // Update the specific day's menu
-        weeklyMenu.days[day] = {
-            breakfast: breakfast || '',
-            lunch: lunch || '',
-            snacks: snacks || '',
-            dinner: dinner || ''
-        };
-        
-        // Save the updated document
-        await weeklyMenu.save();
+        // Update the daily menu (if date was provided)
+        const updated = await FoodMenu.findOneAndUpdate(
+            { date: dateObj },
+            {
+                breakfast: breakfast || '',
+                lunch: lunch || '',
+                snacks: snacks || '',
+                dinner: dinner || ''
+            },
+            { new: true, upsert: true }
+        );
         
         res.status(200).json({
             success: true,
             message: 'Menu updated successfully',
-            data: weeklyMenu.days[day]
+            data: updated
         });
         
     } catch (error) {
@@ -122,76 +127,79 @@ const updateDayMenu = async (req, res) => {
             error: error.message
         });
     }
-};
+});
 
 // Get current week number
-const getCurrentWeek = async (req, res) => {
+const getCurrentWeek = expressAsyncHandler(async (req, res) => {
     try {
         const now = new Date();
-        const currentWeek = getRotationWeekIndex(now);
-
+        const dayOfWeek = now.getDay();
+        
+        // Calculate week start (Sunday = 0)
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - dayOfWeek);
+        weekStart.setHours(0, 0, 0, 0);
+        
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 7);
+        
+        const menus = await FoodMenu.find({
+            date: {
+                $gte: weekStart,
+                $lt: weekEnd
+            }
+        }).sort({ date: 1 });
+        
         res.status(200).json({
             success: true,
-            currentWeek: currentWeek
+            weekStart: weekStart.toISOString().split('T')[0],
+            weekEnd: weekEnd.toISOString().split('T')[0],
+            menus: menus
         });
-        
     } catch (error) {
-        console.error('Error getting current week:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to get current week',
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
-};
+});
+
 
 // Create or update entire week menu
-const updateWeekMenu = async (req, res) => {
+const updateWeekMenu = expressAsyncHandler(async (req, res) => {
     try {
-        const { week, days } = req.body;
+        const { weekData } = req.body;
         
-        if (!week || !days) {
-            return res.status(400).json({
-                success: false,
-                message: 'Week and days data are required'
-            });
+        if (!weekData || !Array.isArray(weekData)) {
+            return res.status(400).json({ success: false, error: 'Week data array is required' });
         }
         
-        // Extract week number from week string
-        const weekNumber = parseInt(week.replace('week', ''));
-
-        // Update or create the weekly rotation template
-        const weeklyMenu = await WeeklyFoodMenu.findOneAndUpdate(
-            {
-                week: weekNumber,
-                weekName: week
-            },
-            {
-                week: weekNumber,
-                weekName: week,
-                days: days
-            },
-            {
-                upsert: true,
-                new: true
-            }
-        );
+        const updatedMenus = [];
+        
+        for (const dayMenu of weekData) {
+            const dateObj = new Date(dayMenu.date);
+            dateObj.setHours(0, 0, 0, 0);
+            
+            const updated = await FoodMenu.findOneAndUpdate(
+                { date: dateObj },
+                {
+                    breakfast: dayMenu.breakfast || '',
+                    lunch: dayMenu.lunch || '',
+                    snacks: dayMenu.snacks || '',
+                    dinner: dayMenu.dinner || ''
+                },
+                { new: true, upsert: true }
+            );
+            
+            updatedMenus.push(updated);
+        }
         
         res.status(200).json({
             success: true,
             message: 'Week menu updated successfully',
-            data: weeklyMenu
+            menus: updatedMenus
         });
-        
     } catch (error) {
-        console.error('Error updating week menu:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update week menu',
-            error: error.message
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
-};
+});
 
 module.exports = {
     getMonthlyMenu,

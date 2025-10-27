@@ -207,9 +207,18 @@ const processAnalyticsData = (pauseData, foodCountData, mealTypes, startDate, en
         result.distributions.mealTypes[meal] = { paused: 0, served: 50 }; // Mock served count
     });
 
-    // Initialize weekday counters
-    ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].forEach(day => {
+    // Initialize weekday counters with detailed meal type breakdown
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const weekdayMealBreakdown = {};
+    
+    daysOfWeek.forEach(day => {
         result.distributions.weekdays[day] = { paused: 0, served: 0 }; // Will be updated during processing
+        weekdayMealBreakdown[day] = {
+            breakfast: 0,
+            lunch: 0,
+            snacks: 0,
+            dinner: 0
+        };
     });
 
     // Process pause data
@@ -240,14 +249,22 @@ const processAnalyticsData = (pauseData, foodCountData, mealTypes, startDate, en
             }
         });
 
-        // Count pauses by date and weekday
+        // Count pauses by date and weekday with meal type breakdown
         if (pause.pause_from) {
             dailyPauseCounts[pause.pause_from] = (dailyPauseCounts[pause.pause_from] || 0) + pausedMeals.length;
             
-            // Also track by weekday
+            // Track by weekday and meal type
             const dateObj = new Date(pause.pause_from + 'T00:00:00Z');
             const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getUTCDay()];
             weekdayPauseCounts[dayName].paused += pausedMeals.length;
+            
+            // Update meal type breakdown for this weekday
+            pausedMeals.forEach(meal => {
+                meal = meal.trim();
+                if (weekdayMealBreakdown[dayName][meal] !== undefined) {
+                    weekdayMealBreakdown[dayName][meal]++;
+                }
+            });
         }
 
         // Count resumed meals
@@ -257,12 +274,14 @@ const processAnalyticsData = (pauseData, foodCountData, mealTypes, startDate, en
         }
     });
 
-    // Update weekday counters with mock served data
+    // Update weekday counters with mock served data and attach meal breakdown
     Object.keys(weekdayPauseCounts).forEach(day => {
         result.distributions.weekdays[day] = weekdayPauseCounts[day];
         if (result.distributions.weekdays[day].served === 0) {
             result.distributions.weekdays[day].served = 50;
         }
+        // Attach meal type breakdown to weekday data
+        result.distributions.weekdays[day].mealBreakdown = weekdayMealBreakdown[day];
     });
 
     // Generate daily trends

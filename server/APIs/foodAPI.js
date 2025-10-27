@@ -565,6 +565,53 @@ foodApp.post('/student/feedback', expressAsyncHandler(async (req, res) => {
     }
 }));
 
+// Get today's feedback status for current student
+foodApp.get('/student/feedback/today-status', expressAsyncHandler(async (req, res) => {
+    try {
+        const { studentId } = req.query;
+
+        if (!studentId) {
+            return res.status(400).json({ message: 'studentId is required' });
+        }
+
+        // Resolve student: allow rollNumber or _id
+        let student = null;
+        if (/^[0-9a-fA-F]{24}$/.test(String(studentId))) {
+            student = await StudentModel.findById(studentId);
+        }
+        if (!student) {
+            student = await StudentModel.findOne({ rollNumber: studentId });
+        }
+        if (!student) return res.status(404).json({ message: 'Student not found' });
+
+        // Today's normalized date string
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+
+        // Find feedback for all 4 meals for today
+        const mealTypes = ['breakfast', 'lunch', 'snacks', 'dinner'];
+        const feedbackStatus = {};
+
+        for (const mealType of mealTypes) {
+            const feedback = await FoodFeedback.findOne({
+                student_id: student._id,
+                mealType: mealType,
+                dateStr: dateStr
+            });
+            feedbackStatus[mealType] = {
+                submitted: !!feedback,
+                rating: feedback ? feedback.rating : null,
+                feedback: feedback ? feedback.feedback : null
+            };
+        }
+
+        res.status(200).json(feedbackStatus);
+    } catch (error) {
+        console.error('Error fetching feedback status:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
 // Note: Student feedback history endpoint removed since feedback is now anonymous
 
 // Get weekly menu for students with date-based structure (next 7 days from today)

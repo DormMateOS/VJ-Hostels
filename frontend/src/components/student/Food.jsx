@@ -93,6 +93,8 @@ const Food = () => {
     const [aggregatedRatings, setAggregatedRatings] = useState({});
     // Track whether the current user has already submitted detailed feedback per meal
     const [submittedFeedbacks, setSubmittedFeedbacks] = useState({});
+    // Store user's feedback details (rating + comment) for each meal
+    const [userFeedbackDetails, setUserFeedbackDetails] = useState({});
     // --- END: STATE ---
 
 
@@ -118,16 +120,43 @@ const Food = () => {
 
     useEffect(() => {
         fetchTodaysMenu();
-    }, []);
+    }, [user]);
 
     const fetchTodaysMenu = async () => {
         try {
             setMenuLoading(true);
             const response = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/student/menu/today-from-schedule`);
             setMenu(response.data);
-            // detect and mark meals already submitted by this user (if API provides hints)
-            setSubmittedFeedbacks(detectSubmittedFromMenu(response.data));
             setError(null);
+            
+            // Now fetch the student's feedback status for today
+            if (user && (user._id || user.id)) {
+                try {
+                    const studentId = user._id || user.id;
+                    const feedbackStatusResponse = await axios.get(
+                        `${import.meta.env.VITE_SERVER_URL}/food-api/student/feedback/today-status`,
+                        { params: { studentId } }
+                    );
+                    
+                    // Convert feedback status to submittedFeedbacks format and store feedback details
+                    const submitted = {};
+                    const feedbackDetails = {};
+                    for (const [mealType, status] of Object.entries(feedbackStatusResponse.data)) {
+                        if (status.submitted) {
+                            submitted[mealType] = true;
+                            feedbackDetails[mealType] = {
+                                rating: status.rating,
+                                feedback: status.feedback
+                            };
+                        }
+                    }
+                    setSubmittedFeedbacks(submitted);
+                    setUserFeedbackDetails(feedbackDetails);
+                } catch (feedbackErr) {
+                    console.error('Error fetching feedback status:', feedbackErr);
+                    // Don't break the meal loading if feedback status fails
+                }
+            }
         } catch (err) {
             console.error('Error fetching today\'s menu:', err);
             setError("No menu available for today.");
@@ -171,6 +200,14 @@ const Food = () => {
             updateLocalAggregate(mealType, parseInt(rating));
             // Mark that the current user has submitted feedback for this meal (prevents duplicates)
             setSubmittedFeedbacks(prev => ({ ...prev, [mealType]: true }));
+            // Store the feedback details for display on menu card
+            setUserFeedbackDetails(prev => ({
+                ...prev,
+                [mealType]: {
+                    rating: parseInt(rating),
+                    feedback: feedbackData.feedback
+                }
+            }));
             setTimeout(() => {
                 setSubmitSuccess(false);
             }, 3000);
@@ -330,28 +367,6 @@ const Food = () => {
                 [meal]: { avg: newAvg, count: newCount }
             };
         });
-    };
-
-    // Try to detect whether the current user already submitted feedback for meals from server payload
-    const detectSubmittedFromMenu = (menuData) => {
-        const result = {};
-        if (!menuData) return result;
-        const meals = ['breakfast','lunch','snacks','dinner'];
-        const truthyFlags = ['yourRating','userRated','ratedByUser','userHasRated','hasRated','rated','ratingSubmitted','feedbackSubmitted','yourFeedback'];
-        meals.forEach(m => {
-            const item = menuData[m];
-            if (!item) return;
-            for (const f of truthyFlags) {
-                if (item[f] != null) {
-                    const v = item[f];
-                    if (v === true || (typeof v === 'number' && v > 0) || (typeof v === 'string' && v.trim() !== '')) {
-                        result[m] = true;
-                        break;
-                    }
-                }
-            }
-        });
-        return result;
     };
 
     // Aggregate rating display (prefer local aggregatedRatings if present, else read from `menu`)
@@ -553,27 +568,49 @@ const Food = () => {
                                             <p className="meal-content mb-1" style={{ paddingLeft:'1.5rem' }}>{menu[meal]}</p>
                                         </div>
                                         
-                                        {/* Show aggregate/current student rating instead of interactive stars */}
+                                        {/* Show aggregate rating or user's previous feedback */}
                                         <div style={{ marginTop: '0.8rem' }}>
-                                            {(() => {
-                                                const agg = getAggregateRating(meal);
-                                                if (!agg || agg.avg == null) {
-                                                    return <small className="text-muted">No ratings yet</small>;
-                                                }
-                                                const rounded = Math.round(agg.avg);
-                                                return (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                                        <div style={{ display: 'flex', gap: '0.15rem' }} aria-hidden>
+                                            {userFeedbackDetails[meal] ? (
+                                                // Show user's previous feedback
+                                                <div style={{ backgroundColor: '#e8f4f8', padding: '0.8rem', borderRadius: '8px', borderLeft: '3px solid #4364f7' }}>
+                                                    <div style={{ marginBottom: '0.5rem' }}>
+                                                        <strong style={{ color: '#4364f7' }}>Your Rating:</strong>
+                                                        <div style={{ display: 'flex', gap: '0.2rem', marginTop: '0.3rem' }}>
                                                             {[1,2,3,4,5].map(s => (
-                                                                <span key={s} style={{ color: s <= rounded ? '#ffb020' : '#e6e6e6', fontSize: '1rem' }}>{'★'}</span>
+                                                                <span key={s} style={{ color: s <= userFeedbackDetails[meal].rating ? '#ffb020' : '#e6e6e6', fontSize: '1rem' }}>{'★'}</span>
                                                             ))}
-                                                        </div>
-                                                        <div style={{ fontSize: '0.95rem', color: '#334155', fontWeight: 600 }}>
-                                                            {agg.avg.toFixed(1)}{agg.count ? ` (${agg.count})` : ''}
+                                                            <span style={{ marginLeft: '0.5rem', fontSize: '0.9rem', color: '#555', fontWeight: 600 }}>{userFeedbackDetails[meal].rating}/5</span>
                                                         </div>
                                                     </div>
-                                                );
-                                            })()}
+                                                    {userFeedbackDetails[meal].feedback && (
+                                                        <div style={{ marginTop: '0.6rem', fontSize: '0.85rem', color: '#333', fontStyle: 'italic' }}>
+                                                            <strong>Your Review:</strong>
+                                                            <p style={{ margin: '0.3rem 0 0 0', color: '#555' }}>"{userFeedbackDetails[meal].feedback}"</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                // Show aggregate rating
+                                                (() => {
+                                                    const agg = getAggregateRating(meal);
+                                                    if (!agg || agg.avg == null) {
+                                                        return <small className="text-muted">No ratings yet</small>;
+                                                    }
+                                                    const rounded = Math.round(agg.avg);
+                                                    return (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                            <div style={{ display: 'flex', gap: '0.15rem' }} aria-hidden>
+                                                                {[1,2,3,4,5].map(s => (
+                                                                    <span key={s} style={{ color: s <= rounded ? '#ffb020' : '#e6e6e6', fontSize: '1rem' }}>{'★'}</span>
+                                                                ))}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.95rem', color: '#334155', fontWeight: 600 }}>
+                                                                {agg.avg.toFixed(1)}{agg.count ? ` (${agg.count})` : ''}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()
+                                            )}
                                         </div>
                                     </div>
                                 </div>
