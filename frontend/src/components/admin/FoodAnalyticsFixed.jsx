@@ -567,12 +567,6 @@ const FoodAnalytics = () => {
                 <div>
                     {(() => {
                         const data = analyticsData || getDefaultAnalyticsData();
-                        console.log('[Render] IIFE executing for data rendering');
-                        console.log('[Render] analyticsData state:', analyticsData);
-                        console.log('[Render] Using data object:', data);
-                        console.log('[Render] data.summary:', data?.summary);
-                        console.log('[Render] data.trends.daily length:', data?.trends?.daily?.length);
-                        console.log('[Render] data.distributions.mealTypes keys:', Object.keys(data?.distributions?.mealTypes || {}));
                         return (
                             <>
                     {/* Summary Cards */}

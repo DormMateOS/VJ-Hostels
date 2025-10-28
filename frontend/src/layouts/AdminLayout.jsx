@@ -112,7 +112,7 @@ const handleLogout = () => {
           <h5 className="m-0">Hostel Management System</h5>
           <div className="d-flex align-items-center">
             <span className="me-3 fw-medium">{admin?.name || 'Admin'}</span>
-            <div className="dropdown">
+            {/* <div className="dropdown">
               <button
                 className="btn btn-outline-primary dropdown-toggle"
                 type="button"
@@ -140,7 +140,7 @@ const handleLogout = () => {
                   </button>
                 </li>
               </ul>
-            </div>
+            </div> */}
           </div>
         </header>
 

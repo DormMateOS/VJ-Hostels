@@ -374,7 +374,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                                                     className="form-control form-control-lg"
                                                     value={startDate}
                                                     onChange={(e) => setStartDate(e.target.value)}
-                                                    min={today}
+                                                    min={todayDate}
                                                     disabled={!!outpassData}
                                                 />
                                             </div>

@@ -258,7 +258,7 @@ const processAnalyticsData = (pauseData, startDate, endDate, mealTypes, totalAva
     
     for (let i = 0; i < daysDiff; i++) {
         const currentDate = new Date(startDateObj);
-        currentDate.setDate(startDateObj.getDate() + i);
+        currentDate.setDate(startDateObj.getDate() + i);    
         const dateStr = formatLocalDate(currentDate);
         const dayName = daysOfWeek[currentDate.getDay()];
         
