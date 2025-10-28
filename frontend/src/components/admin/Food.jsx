@@ -915,8 +915,8 @@ const Food = () => {
                                         <option value="thisMonth">This Month</option>
                                         <option value="lastMonth">Last Month</option>
                                         <option value="thisYear">This Year</option>
-                                        <option value="lastYear">Last Year</option>
-                                        <option value="custom">Custom Range</option>
+                                        {/* <option value="lastYear">Last Year</option>
+                                        <option value="custom">Custom Range</option> */}
                                     </select>
                                 </div>
 

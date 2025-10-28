@@ -119,9 +119,6 @@ const getDashboardData = asyncHandler(async (req, res) => {
         mealTypeArray = mealTypes.split(',').filter(Boolean);
     }
 
-    console.log('Date range:', { startDate, endDate });
-    console.log('Meal type array:', mealTypeArray);
-
     // Build student filter
     let studentFilter = { is_active: true };
     if (hostelId) studentFilter.hostel_id = hostelId;
@@ -130,8 +127,6 @@ const getDashboardData = asyncHandler(async (req, res) => {
     // Get students based on filter
     const students = await Student.find(studentFilter).select('_id name room hostel');
     const studentIds = students.map(s => s._id);
-
-    console.log(`Found ${students.length} students matching filters`);
 
     // Get students NOT on outpass during this date range (with status 'out' or 'returned')
     const startDateObj = new Date(startDate);
@@ -263,7 +258,7 @@ const processAnalyticsData = (pauseData, startDate, endDate, mealTypes, totalAva
     
     for (let i = 0; i < daysDiff; i++) {
         const currentDate = new Date(startDateObj);
-        currentDate.setDate(startDateObj.getDate() + i);
+        currentDate.setDate(startDateObj.getDate() + i);    
         const dateStr = formatLocalDate(currentDate);
         const dayName = daysOfWeek[currentDate.getDay()];
         
@@ -404,13 +399,13 @@ const processAnalyticsData = (pauseData, startDate, endDate, mealTypes, totalAva
     result.insights = generateInsights(totalMealsPaused, result.summary.totalMealsServed, 
         result.summary.totalMealsAvailable, studentPauseCounts.size);
 
-    console.log('Processed analytics result summary:', {
-        totalPaused: result.summary.totalMealsPaused,
-        totalServed: result.summary.totalMealsServed,
-        pausePercentage: result.summary.pausePercentage,
-        dailyTrendsCount: result.trends.daily.length,
-        uniqueStudents: studentPauseCounts.size
-    });
+    // console.log('Processed analytics result summary:', {
+    //     totalPaused: result.summary.totalMealsPaused,
+    //     totalServed: result.summary.totalMealsServed,
+    //     pausePercentage: result.summary.pausePercentage,
+    //     dailyTrendsCount: result.trends.daily.length,
+    //     uniqueStudents: studentPauseCounts.size
+    // });
     
     return result;
 };

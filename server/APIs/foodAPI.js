@@ -182,14 +182,69 @@ foodApp.get('/admin/feedback', verifyAdmin, expressAsyncHandler(async (req, res)
             mealType = 'all'
         } = req.query;
 
-        // Build date filter
-        const { startDate, endDate } = getDateRange(dateFilter, customStartDate, customEndDate);
+        // Build date filter using dateStr field (YYYY-MM-DD string)
+        let startDateStr, endDateStr;
         
-        // Build query filter
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        switch (dateFilter) {
+            case 'today':
+                startDateStr = todayStr;
+                endDateStr = todayStr;
+                break;
+            case 'yesterday':
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                startDateStr = yesterdayStr;
+                endDateStr = yesterdayStr;
+                break;
+            case 'thisWeek':
+                const dayOfWeek = today.getDay();
+                const weekStart = new Date(today);
+                weekStart.setDate(today.getDate() - dayOfWeek);
+                startDateStr = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+                endDateStr = todayStr;
+                break;
+            case 'lastWeek':
+                const weekStartLast = new Date(today);
+                weekStartLast.setDate(today.getDate() - today.getDay() - 7);
+                const weekEndLast = new Date(weekStartLast);
+                weekEndLast.setDate(weekStartLast.getDate() + 6);
+                startDateStr = `${weekStartLast.getFullYear()}-${String(weekStartLast.getMonth() + 1).padStart(2, '0')}-${String(weekStartLast.getDate()).padStart(2, '0')}`;
+                endDateStr = `${weekEndLast.getFullYear()}-${String(weekEndLast.getMonth() + 1).padStart(2, '0')}-${String(weekEndLast.getDate()).padStart(2, '0')}`;
+                break;
+            case 'thisMonth':
+                startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+                endDateStr = todayStr;
+                break;
+            case 'lastMonth':
+                const lastMonth = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+                const lastMonthYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
+                const lastMonthDays = new Date(lastMonthYear, lastMonth + 1, 0).getDate();
+                startDateStr = `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-01`;
+                endDateStr = `${lastMonthYear}-${String(lastMonth + 1).padStart(2, '0')}-${String(lastMonthDays).padStart(2, '0')}`;
+                break;
+            case 'custom':
+                if (customStartDate && customEndDate) {
+                    startDateStr = customStartDate;
+                    endDateStr = customEndDate > todayStr ? todayStr : customEndDate;
+                } else {
+                    startDateStr = todayStr;
+                    endDateStr = todayStr;
+                }
+                break;
+            default:
+                startDateStr = todayStr;
+                endDateStr = todayStr;
+        }
+
+        // Build query filter using dateStr
         let filter = {
-            date: {
-                $gte: startDate,
-                $lt: endDate
+            dateStr: {
+                $gte: startDateStr,
+                $lte: endDateStr
             }
         };
 
@@ -621,8 +676,6 @@ foodApp.get('/student/menu/weekly-schedule-structured', expressAsyncHandler(asyn
                 ...dayMenuData
             });
         }
-        
-        console.log(`[WEEKLY SCHEDULE STRUCTURED] Returning ${schedule.length} days of schedule`);
         res.status(200).json(schedule);
         
     } catch (error) {
@@ -746,10 +799,9 @@ foodApp.get('/admin/food/stats/today', verifyAdmin, expressAsyncHandler(async (r
         // Find all active pauses for today
         const pausesForToday = await FoodPauseEnhanced.find({
             is_active: true,
-            approval_status: 'approved',
             pause_start_date: { $lte: todayStr },
             pause_end_date: { $gte: todayStr }
-        }).populate('student_id', 'rollNumber name hostel');
+        }).populate('student_id', 'rollNumber name');
 
         // Group pauses by meal type
         const mealPauseStats = {
