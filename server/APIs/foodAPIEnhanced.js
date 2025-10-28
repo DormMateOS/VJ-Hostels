@@ -55,9 +55,14 @@ foodEnhancedApp.post('/pause', expressAsyncHandler(async (req, res) => {
         }
 
         // Validate edit timing for today's pauses
-        const now = new Date();
-        const currentTime = now.toTimeString().slice(0, 5);
-        const currentDate = now.toISOString().split('T')[0];
+        const nowTime = new Date();
+        const currentTime = nowTime.toTimeString().slice(0, 5);
+        
+        // Get current date in local timezone (not UTC)
+        const year = nowTime.getFullYear();
+        const month = String(nowTime.getMonth() + 1).padStart(2, '0');
+        const day = String(nowTime.getDate()).padStart(2, '0');
+        const currentDate = `${year}-${month}-${day}`;
         
         const mealTimings = {
             breakfast: { editDeadline: "05:00" },
@@ -66,12 +71,25 @@ foodEnhancedApp.post('/pause', expressAsyncHandler(async (req, res) => {
             dinner: { editDeadline: "17:30" }
         };
 
+        // Only enforce time-based restrictions for future pauses, not for today
+        // For today's pauses that have passed deadline, check if the pause was just cancelled
         if (startDate === currentDate) {
             for (const meal of meals) {
                 if (mealTimings[meal] && currentTime >= mealTimings[meal].editDeadline) {
-                    return res.status(400).json({ 
-                        error: `Cannot pause ${meal} - deadline passed (2 hours before meal time)` 
+                    // Check if there's an active pause for this meal
+                    const activePause = await FoodPauseEnhanced.findOne({
+                        student_id: student._id,
+                        meal_type: meal,
+                        pause_start_date: startDate,
+                        is_active: true
                     });
+                    
+                    // Only block if there's already an active pause
+                    if (activePause) {
+                        return res.status(400).json({ 
+                            error: `Cannot pause ${meal} - deadline passed (2 hours before meal time)` 
+                        });
+                    }
                 }
             }
         }
@@ -86,7 +104,8 @@ foodEnhancedApp.post('/pause', expressAsyncHandler(async (req, res) => {
                 pause_start_date: startDate,
                 pause_end_date: endDate,
                 outpass_id: outpassId,
-                approval_status: 'approved'
+                approval_status: 'approved',
+                is_active: true
             });
             
             const saved = await pauseRecord.save();

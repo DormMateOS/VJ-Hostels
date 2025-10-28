@@ -44,6 +44,14 @@ const FoodAnalytics = () => {
         mealTypes: 'all'
     });
 
+    // Meal times configuration for time-based filtering
+    const MEAL_TIMES = {
+        breakfast: { start: 7, end: 9 },      // 7:00 AM - 9:00 AM
+        lunch: { start: 12, end: 14 },        // 12:00 PM - 2:00 PM
+        snacks: { start: 16, end: 18 },       // 4:00 PM - 6:00 PM
+        dinner: { start: 19, end: 21 }        // 7:00 PM - 9:00 PM
+    };
+
     // Refs for capturing chart images
     const dashboardRef = useRef(null);
     const chartsRefs = useRef({
@@ -111,11 +119,8 @@ const FoodAnalytics = () => {
             
             if (response.data?.data) {                
                 setAnalyticsData(response.data.data);
-            } else {
-                console.log('[DATA] Available keys in response.data:', Object.keys(response.data || {}));
-                
+            } else {                
                 if (response.data?.success) {
-                    console.log('[Fallback] Response successful, attempting alternative structure');
                     setAnalyticsData(response.data);
                 } else {
                     setAnalyticsData(getDefaultAnalyticsData());
@@ -148,6 +153,58 @@ const FoodAnalytics = () => {
             console.log('[Loading] setLoading(false) called');
         }
     };
+
+    // Get available meal types based on current time (for "Today" filter)
+    const getAvailableMealTypes = () => {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const availableMeals = [];
+
+        // Check each meal type to see if it has started
+        Object.entries(MEAL_TIMES).forEach(([meal, times]) => {
+            if (currentHour >= times.start) {
+                availableMeals.push(meal);
+            }
+        });
+
+        return availableMeals;
+    };
+
+    // Check if a meal type should be available in the dropdown
+    const isMealTypeAvailable = (mealType) => {
+        if (filters.dateFilter !== 'today') {
+            // All meals available for non-today filters
+            return true;
+        }
+        
+        // For today, only show meals that have started
+        const availableMeals = getAvailableMealTypes();
+        const mealTypes = mealType.split(',').map(m => m.trim());
+        
+        // Check if all meals in the option have started
+        return mealTypes.every(meal => availableMeals.includes(meal));
+    };
+
+    // Auto-adjust meal type filter when switching to "Today" or from "Today"
+    useEffect(() => {
+        if (filters.dateFilter === 'today') {
+            const availableMeals = getAvailableMealTypes();
+            
+            // If current meal type selection is not available, switch to first available meal
+            if (filters.mealTypes !== 'all') {
+                const selectedMeals = filters.mealTypes.split(',').map(m => m.trim());
+                if (!selectedMeals.every(meal => availableMeals.includes(meal))) {
+                    // If no meals are available yet, keep as 'all'
+                    if (availableMeals.length === 0) {
+                        setFilters(prev => ({ ...prev, mealTypes: 'all' }));
+                    } else {
+                        // Otherwise set to first available meal
+                        setFilters(prev => ({ ...prev, mealTypes: availableMeals[0] }));
+                    }
+                }
+            }
+        }
+    }, [filters.dateFilter]);
 
     const handleFilterChange = (key, value) => {
         console.log(`[Filter Change] ${key}: "${value}"`);
@@ -463,13 +520,13 @@ const FoodAnalytics = () => {
                                 value={filters.mealTypes}
                                 onChange={(e) => handleFilterChange('mealTypes', e.target.value)}
                             >
-                                <option value="all">All Meals</option>
-                                <option value="breakfast">Breakfast Only</option>
-                                <option value="lunch">Lunch Only</option>
-                                <option value="snacks">Snacks Only</option>
-                                <option value="dinner">Dinner Only</option>
-                                <option value="breakfast,lunch">Breakfast & Lunch</option>
-                                <option value="lunch,dinner">Lunch & Dinner</option>
+                                <option value="all" disabled={!isMealTypeAvailable('all')}>All Meals</option>
+                                <option value="breakfast" disabled={!isMealTypeAvailable('breakfast')}>Breakfast Only</option>
+                                <option value="lunch" disabled={!isMealTypeAvailable('lunch')}>Lunch Only</option>
+                                <option value="snacks" disabled={!isMealTypeAvailable('snacks')}>Snacks Only</option>
+                                <option value="dinner" disabled={!isMealTypeAvailable('dinner')}>Dinner Only</option>
+                                <option value="breakfast,lunch" disabled={!isMealTypeAvailable('breakfast,lunch')}>Breakfast & Lunch</option>
+                                <option value="lunch,dinner" disabled={!isMealTypeAvailable('lunch,dinner')}>Lunch & Dinner</option>
                             </select>
                         </div>
                         

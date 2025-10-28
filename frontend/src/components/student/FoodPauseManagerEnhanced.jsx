@@ -14,12 +14,33 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
     const [selectedMeals, setSelectedMeals] = useState([]);
     const [message, setMessage] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [todayDate, setTodayDate] = useState('');
+    const [tomorrowDate, setTomorrowDate] = useState('');
 
     useEffect(() => {
         if (user?.rollNumber) {
             fetchPausedMeals();
         }
     }, [user?.rollNumber]);
+
+    useEffect(() => {
+        // Initialize today and tomorrow dates when component mounts
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+        
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tYear = tomorrow.getFullYear();
+        const tMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        const tDay = String(tomorrow.getDate()).padStart(2, '0');
+        const tomorrowStr = `${tYear}-${tMonth}-${tDay}`;
+        
+        setTodayDate(todayStr);
+        setTomorrowDate(tomorrowStr);
+    }, []);
 
     useEffect(() => {
         // Pre-fill from outpass data if provided
@@ -38,28 +59,6 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
         dinner: { start: "19:30", editDeadline: "17:30" }
     };
 
-    // Get today's date in local timezone (not UTC)
-    const getTodayStr = () => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    // Get tomorrow's date in local timezone (not UTC)
-    const getTomorrowStr = () => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const year = tomorrow.getFullYear();
-        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-        const day = String(tomorrow.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const today = getTodayStr();
-    const tomorrow = getTomorrowStr();
-
     const fetchPausedMeals = async () => {
         try {
             setLoading(true);
@@ -76,14 +75,31 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
         setPauseType(type);
 
         switch (type) {
-            case 'today':
+            case 'today': {
+                // Calculate today's date locally in case state isn't initialized yet
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const today = `${y}-${m}-${d}`;
+                console.log(`[Pause Manager] Selected 'today': ${today} (from state: ${todayDate})`);
                 setStartDate(today);
                 setEndDate(today);
                 break;
-            case 'tomorrow':
-                setStartDate(tomorrow);
-                setEndDate(tomorrow);
+            }
+            case 'tomorrow': {
+                // Calculate tomorrow's date locally in case state isn't initialized yet
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const y = tomorrow.getFullYear();
+                const m = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const d = String(tomorrow.getDate()).padStart(2, '0');
+                const tmr = `${y}-${m}-${d}`;
+                console.log(`[Pause Manager] Selected 'tomorrow': ${tmr} (from state: ${tomorrowDate})`);
+                setStartDate(tmr);
+                setEndDate(tmr);
                 break;
+            }
             case 'custom':
                 setStartDate('');
                 setEndDate('');
@@ -113,6 +129,12 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                 outpassId: outpassData?._id || null
             };
 
+            console.log(`[Pause Submit] About to send pause creation request`);
+            console.log(`[Pause Submit] pauseType: ${pauseType}`);
+            console.log(`[Pause Submit] startDate state: "${startDate}" (todayDate="${todayDate}", tomorrowDate="${tomorrowDate}")`);
+            console.log(`[Pause Submit] endDate state: "${endDate}"`);
+            console.log(`[Pause Submit] Full payload:`, pauseData);
+            
             await axios.post(`${import.meta.env.VITE_SERVER_URL}/food-api/enhanced/pause`, pauseData);
             
             setMessage({ type: 'success', text: 'Food pause created successfully!' });
@@ -184,6 +206,18 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
             upcoming: pausedMeals.filter(p => p.pause_start_date > currentDate && p.is_active),
             past: pausedMeals.filter(p => p.pause_end_date < currentDate || !p.is_active)
         };
+    };
+
+    // Check if a pause can still be edited (end date hasn't passed)
+    const canEditPause = (pauseEndDate) => {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const currentDate = `${year}-${month}-${day}`;
+        
+        // Can edit if pause end date is today or in the future
+        return pauseEndDate >= currentDate;
     };
 
     if (loading) {
@@ -504,12 +538,14 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                                                                 </p>
                                                                 <span className="badge bg-success">Active</span>
                                                             </div>
-                                                            <button
-                                                                className="btn btn-outline-danger btn-sm"
-                                                                onClick={() => handleCancelPause(pause._id)}
-                                                            >
-                                                                <i className="bi bi-x-circle"></i>
-                                                            </button>
+                                                            {canEditPause(pause.pause_end_date) && (
+                                                                <button
+                                                                    className="btn btn-outline-danger btn-sm"
+                                                                    onClick={() => handleCancelPause(pause._id)}
+                                                                >
+                                                                    <i className="bi bi-x-circle"></i>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -545,12 +581,14 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                                                                 </p>
                                                                 <span className="badge bg-primary">Upcoming</span>
                                                             </div>
-                                                            <button
-                                                                className="btn btn-outline-danger btn-sm"
-                                                                onClick={() => handleCancelPause(pause._id)}
-                                                            >
-                                                                <i className="bi bi-x-circle"></i>
-                                                            </button>
+                                                            {canEditPause(pause.pause_end_date) && (
+                                                                <button
+                                                                    className="btn btn-outline-danger btn-sm"
+                                                                    onClick={() => handleCancelPause(pause._id)}
+                                                                >
+                                                                    <i className="bi bi-x-circle"></i>
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
