@@ -153,6 +153,7 @@ const FoodAnalytics = () => {
             console.log('[Loading] setLoading(false) called');
         }
     };
+    
 
     // Get available meal types based on current time (for "Today" filter)
     const getAvailableMealTypes = () => {
@@ -531,13 +532,13 @@ const FoodAnalytics = () => {
                         </div>
                         
                         <div className="col-md-3 d-flex align-items-end gap-2">
-                            <button
+                            {/* <button
                                 className="btn btn-success"
                                 onClick={handleExportPDF}
                             >
                                 <i className="bi bi-file-pdf me-2"></i>
                                 Export PDF
-                            </button>
+                            </button> */}
                             {/* <button
                                 className="btn btn-info"
                                 onClick={handleExportPowerPoint}
@@ -546,6 +547,7 @@ const FoodAnalytics = () => {
                                 Export PPT
                             </button> */}
                         </div>
+                        
                     </div>
                 </div>
             </div>
