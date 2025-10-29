@@ -6,6 +6,7 @@ const FoodScheduleViewer = () => {
     const { user, loading: userLoading } = useCurrentUser();
     const [studentStatus, setStudentStatus] = useState(null);
     const [foodSchedule, setFoodSchedule] = useState([]);
+    const [pausedRecords, setPausedRecords] = useState([]);
     const [weekDates, setWeekDates] = useState([]);
     const [selectedDate, setSelectedDate] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -15,8 +16,10 @@ const FoodScheduleViewer = () => {
 
     useEffect(() => {
         if (user?.rollNumber) {
+            console.log(`[FOODSCHEDULE] Initializing for student: ${user.rollNumber}`);
             fetchStudentStatus();
             fetchFoodSchedule();
+            fetchStudentPauses();
             generateWeekDates();
         }
     }, [user?.rollNumber]);
@@ -77,6 +80,22 @@ const FoodScheduleViewer = () => {
         }
     };
 
+    const fetchStudentPauses = async () => {
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_SERVER_URL}/food-api/enhanced/my-pauses?studentId=${user.rollNumber}`);
+            // Keep only active pauses (server returns all)
+            const activePauses = (res.data || []).filter(p => p.is_active);
+            console.log('[PAUSES] Fetched active pauses:', activePauses);
+            activePauses.forEach(p => {
+                console.log(`[PAUSES] Record: meal=${p.meal_type}, start=${p.pause_start_date}, end=${p.pause_end_date}, active=${p.is_active}`);
+            });
+            setPausedRecords(activePauses);
+        } catch (err) {
+            console.error('[PAUSES] Error fetching student pauses:', err);
+            setPausedRecords([]);
+        }
+    };
+
     const generateWeekDates = () => {
         const today = new Date();
         
@@ -102,18 +121,30 @@ const FoodScheduleViewer = () => {
     };
 
     const getMealStatusForDate = (dateString) => {
-        // Simplified status check - only for minimal visual indication
-        if (!studentStatus?.pause_from) return { isPaused: false, pausedMeals: [] };
+        // Build paused meals list from enhanced pauses (per-meal records)
+        if (!pausedRecords || pausedRecords.length === 0) return { isPaused: false, pausedMeals: [] };
 
-        const { pause_from, resume_from, pause_meals } = studentStatus;
+        const pausedMealsForDate = pausedRecords
+            .filter(p => {
+                // Ensure dates are in the same format (YYYY-MM-DD) for comparison
+                const pStartDate = p.pause_start_date ? String(p.pause_start_date).trim() : '';
+                const pEndDate = p.pause_end_date ? String(p.pause_end_date).trim() : '';
+                const cDate = String(dateString).trim();
+                
+                // Check if meal is active and date is within range
+                const isInRange = p.is_active && pStartDate <= cDate && pEndDate >= cDate;
+                
+                // Log for debugging
+                if (isInRange) {
+                    console.log(`[PAUSE CHECK] Meal ${p.meal_type} paused on ${cDate}: range ${pStartDate} to ${pEndDate}`);
+                }
+                
+                return isInRange;
+            })
+            .map(p => p.meal_type);
 
-        // Only show pause status for the exact pause date to minimize confusion
-        if (dateString === pause_from) {
-            const pausedMealsList = pause_meals?.split(',').map(m => m.trim()) || [];
-            return { isPaused: pausedMealsList.length > 0, pausedMeals: pausedMealsList };
-        }
-        
-        return { isPaused: false, pausedMeals: [] };
+        const uniquePaused = Array.from(new Set(pausedMealsForDate));
+        return { isPaused: uniquePaused.length > 0, pausedMeals: uniquePaused };
     };
 
     const getMenuForDate = (dateString) => {
@@ -195,6 +226,8 @@ const FoodScheduleViewer = () => {
     const dayMenu = getMenuForDate(selectedDate);
     const meals = getMealsForDate(selectedDate);
     const mealStatus = getMealStatusForDate(selectedDate);
+    
+    console.log(`[RENDER] Selected date: ${selectedDate}, Paused meals for this date:`, mealStatus.pausedMeals);
     
     // Get today's date in local timezone (not UTC)
     const todayDate = new Date();
@@ -337,96 +370,116 @@ const FoodScheduleViewer = () => {
                                     {meals.map(meal => {
                                         const isMealPaused = mealStatus.pausedMeals.includes(meal);
                                         return (
-                                        <div key={meal} className="col-12 col-xl-6">
-                                            <div 
-                                                className="h-100 border"
-                                                style={{ 
-                                                    backgroundColor: '#ffffff',
-                                                    borderColor: '#e2e8f0',
-                                                    borderWidth: '2px',
-                                                    borderRadius: '10px',
-                                                    padding: '1rem',
-                                                    transition: 'all 0.2s ease',
-                                                    cursor: 'default',
-                                                    borderLeftWidth: '4px',
-                                                    borderLeftColor: getMealColor(meal)
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.currentTarget.style.boxShadow = 'none';
-                                                    e.currentTarget.style.transform = 'translateY(0)';
-                                                }}
-                                            >
-                                                <div className="d-flex align-items-start justify-content-between mb-3">
-                                                    <div className="d-flex align-items-center gap-3">
-                                                        <div style={{ 
-                                                            fontSize: '1.5rem',
-                                                            backgroundColor: '#f1f5f9',
-                                                            borderRadius: '10px',
-                                                            width: '48px',
-                                                            height: '48px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center'
-                                                        }}>
-                                                            {getMealIcon(meal)}
-                                                        </div>
-                                                        <div>
-                                                            <h5 className="mb-1 fw-bold text-capitalize" style={{ 
-                                                                fontSize: '1.1rem', 
-                                                                color: getMealColor(meal)
+                                            <div key={meal} className="col-12 col-xl-6" style={{ position: 'relative' }}>
+                                                <div
+                                                    className="h-100 border"
+                                                    style={{
+                                                        backgroundColor: '#ffffff',
+                                                        borderColor: '#e2e8f0',
+                                                        borderWidth: '2px',
+                                                        borderRadius: '10px',
+                                                        padding: '1rem',
+                                                        transition: 'all 0.2s ease',
+                                                        cursor: 'default',
+                                                        borderLeftWidth: '4px',
+                                                        borderLeftColor: getMealColor(meal)
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.boxShadow = 'none';
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                    }}
+                                                >
+                                                    <div className="d-flex align-items-start justify-content-between mb-3">
+                                                        <div className="d-flex align-items-center gap-3">
+                                                            <div style={{
+                                                                fontSize: '1.5rem',
+                                                                backgroundColor: '#f1f5f9',
+                                                                borderRadius: '10px',
+                                                                width: '48px',
+                                                                height: '48px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center'
                                                             }}>
-                                                                {meal}
-                                                                {isMealPaused && (
-                                                                    <small className="ms-2 badge bg-warning text-dark" style={{ fontSize: '0.6rem' }}>
-                                                                        Paused
-                                                                    </small>
-                                                                )}
-                                                            </h5>
-                                                            <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
-                                                                {getMealTime(meal)}
+                                                                {getMealIcon(meal)}
+                                                            </div>
+                                                            <div>
+                                                                <h5 className="mb-1 fw-bold text-capitalize" style={{
+                                                                    fontSize: '1.1rem',
+                                                                    color: getMealColor(meal)
+                                                                }}>
+                                                                    {meal}
+                                                                </h5>
+                                                                <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                                                    {getMealTime(meal)}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
+
+                                                    <div
+                                                        style={{
+                                                            backgroundColor: '#f8fafc',
+                                                            borderRadius: '8px',
+                                                            padding: '0.9rem',
+                                                            fontSize: '0.93rem',
+                                                            lineHeight: '1.6',
+                                                            color: '#334155',
+                                                            minHeight: '70px',
+                                                            border: '1px solid #e2e8f0'
+                                                        }}
+                                                    >
+                                                        {(dayMenu && dayMenu[meal]) || 'Menu will be updated soon'}
+                                                    </div>
                                                 </div>
-                                                <div 
-                                                    style={{ 
-                                                        backgroundColor: '#f8fafc',
-                                                        borderRadius: '8px',
-                                                        padding: '0.9rem',
-                                                        fontSize: '0.93rem',
-                                                        lineHeight: '1.6',
-                                                        color: '#334155',
-                                                        minHeight: '70px',
-                                                        border: '1px solid #e2e8f0'
-                                                    }}
-                                                >
-                                                    {(dayMenu && dayMenu[meal]) || 'Menu will be updated soon'}
-                                                </div>
+
+                                                {/* Red X badge positioned at top-right corner of card */}
+                                                {isMealPaused && (
+                                                    <span style={{
+                                                        position: 'absolute',
+                                                        right: '20px',
+                                                        top: '10px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#fff',
+                                                        backgroundColor: '#dc2626',
+                                                        width: '28px',
+                                                        height: '28px',
+                                                        borderRadius: '50%',
+                                                        fontSize: '1.2rem',
+                                                        fontWeight: 700,
+                                                        lineHeight: 1,
+                                                        boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)'
+                                                    }}>✕</span>
+                                                )}
                                             </div>
-                                        </div>
-                                    )})}
+                                        );
+                                    })}
                                 </div>
                             ) : (
-                                <div className="text-center py-5" style={{ marginTop: '4rem' }}>
-                                    <div style={{ 
-                                        fontSize: '4rem', 
-                                        opacity: 0.15,
-                                        marginBottom: '1rem'
-                                    }}>
-                                        🍽️
+                                meals.length === 0 && (
+                                    <div className="text-center py-5" style={{ marginTop: '4rem' }}>
+                                        <div style={{
+                                            fontSize: '4rem',
+                                            opacity: 0.15,
+                                            marginBottom: '1rem'
+                                        }}>
+                                            {'🍽️'}
+                                        </div>
+                                        <h4 className="mb-2" style={{ color: '#64748b', fontWeight: '600' }}>No meals scheduled</h4>
+                                        <p className="mb-0" style={{ color: '#94a3b8' }}>
+                                            {studentStatus?.pause_from ? 'Your meal service is currently paused' : 'Check back soon for meal updates'}
+                                        </p>
                                     </div>
-                                    <h4 className="mb-2" style={{ color: '#64748b', fontWeight: '600' }}>No meals scheduled</h4>
-                                    <p className="mb-0" style={{ color: '#94a3b8' }}>
-                                        {studentStatus?.pause_from ? 'Your meal service is currently paused' : 'Check back soon for meal updates'}
-                                    </p>
-                                </div>
+                                )
                             )}
                         </div>
-                    </div>
+                        </div>
                 </div>
             </div>
         </div>
