@@ -401,7 +401,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
 
             {/* Navigation Tabs */}
             <div className="card border-0 shadow-sm mb-4">
-                    <div className="card-header bg-light border-0">
+                {/* <div className="card-header bg-light border-0">
                     <ul className="nav nav-tabs card-header-tabs">
                         <li className="nav-item">
                             <button
@@ -414,7 +414,7 @@ const FoodPauseManagerEnhanced = ({ outpassData = null }) => {
                             </button>
                         </li>
                     </ul>
-                </div>
+                </div> */}
 
                 <div className="card-body p-4">
                     {activeTab === 'pause' && (

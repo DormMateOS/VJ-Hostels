@@ -43,7 +43,7 @@ function Navbar({ onNavigate, isDesktop = false, isInSidebar = false }) {
                         onClick={handleNavClick}
                         isDesktop={true}
                     />
-                    <NavItem
+                    {/* <NavItem
                         icon={<MessageSquare size={18} />}
                         label="Complaints"
                         to="complaints"
@@ -58,7 +58,7 @@ function Navbar({ onNavigate, isDesktop = false, isInSidebar = false }) {
                         isActive={location.pathname.includes('/home/outpass')}
                         onClick={handleNavClick}
                         isDesktop={true}
-                    />
+                    /> */}
                     <NavItem
                         icon={<Utensils size={18} />}
                         label="Food"
@@ -67,22 +67,22 @@ function Navbar({ onNavigate, isDesktop = false, isInSidebar = false }) {
                         onClick={handleNavClick}
                         isDesktop={true}
                     />
-                    <NavItem
+                    {/* <NavItem
                         icon={<UserCheck size={18} />}
                         label="Visitors"
                         to="visitors"
                         isActive={location.pathname.includes('/home/visitors')}
                         onClick={handleNavClick}
                         isDesktop={true}
-                    />
-                    <NavItem
+                    /> */}
+                    {/* <NavItem
                         icon={<User size={18} />}
                         label="Profile"
                         to="profile"
                         isActive={location.pathname.includes('/home/profile')}
                         onClick={handleNavClick}
                         isDesktop={true}
-                    />
+                    /> */}
                 </nav>
             </div>
         );
@@ -106,11 +106,11 @@ function Navbar({ onNavigate, isDesktop = false, isInSidebar = false }) {
                     }}>
                         <SidebarNavItem label="Home" to="" isActive={location.pathname === '/home' || location.pathname === '/home/'} onClick={handleNavClick} />
                         <SidebarNavItem label="Announcements" to="announcements" isActive={location.pathname.includes('/home/announcements')} onClick={handleNavClick} />
-                        <SidebarNavItem label="Complaints" to="complaints" isActive={location.pathname.includes('/home/complaints')} onClick={handleNavClick} />
+                        {/* <SidebarNavItem label="Complaints" to="complaints" isActive={location.pathname.includes('/home/complaints')} onClick={handleNavClick} />
                         <SidebarNavItem label="Outpass" to="outpass" isActive={location.pathname.includes('/home/outpass')} onClick={handleNavClick} />
-                        <SidebarNavItem label="Student Profile" to="profile" isActive={location.pathname.includes('/home/profile')} onClick={handleNavClick} />
+                        <SidebarNavItem label="Student Profile" to="profile" isActive={location.pathname.includes('/home/profile')} onClick={handleNavClick} /> */}
                         <SidebarNavItem label="Food" to="food" isActive={location.pathname.includes('/home/food')} onClick={handleNavClick} />
-                        <SidebarNavItem label="Visitors" to="visitors" isActive={location.pathname.includes('/home/visitors')} onClick={handleNavClick} />
+                        {/* <SidebarNavItem label="Visitors" to="visitors" isActive={location.pathname.includes('/home/visitors')} onClick={handleNavClick} /> */}
                     </nav>
 
                     <div style={{

@@ -33,66 +33,69 @@ const handleLogout = () => {
         </div>
           <div className="sidebar-nav-container">
               <ul className="nav flex-column">
-                  <li className="nav-item">
-                      <NavLink to="/admin" end className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin" end className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
                           {/* <i className="bi bi-speedometer2 me-3"></i> */}
-                          {sidebarOpen && <span>Dashboard</span>}
-                      </NavLink>
-                  </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/students" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
-                          {/* <i className="bi bi-people me-3"></i> */}
-                          {sidebarOpen && <span>Students</span>}
-                      </NavLink>
-                  </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/rooms" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
-                          {/* <i className="bi bi-building me-3"></i> */}
-                          {sidebarOpen && <span>Rooms</span>}
-                      </NavLink>
-                  </li>
+                          {/* {sidebarOpen && <span>Dashboard</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
                   <li className="nav-item">
                       <NavLink to="/admin/announcements" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
                           {/* <i className="bi bi-megaphone me-3"></i> */}
                           {sidebarOpen && <span>Announcements</span>}
                       </NavLink>
                   </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/complaints" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                  
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/students" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
+                          {/* <i className="bi bi-people me-3"></i> */}
+                          {/* {sidebarOpen && <span>Students</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/rooms" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
+                          {/* <i className="bi bi-building me-3"></i> */}
+                          {/* {sidebarOpen && <span>Rooms</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/complaints" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
                           {/* <i className="bi bi-exclamation-triangle me-3"></i> */}
-                          {sidebarOpen && <span>Complaints</span>}
-                      </NavLink>
-                  </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/outpasses" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                          {/* {sidebarOpen && <span>Complaints</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/outpasses" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
                           {/* <i className="bi bi-box-arrow-right me-3"></i> */}
-                          {sidebarOpen && <span>Outpasses</span>}
-                      </NavLink>
-                  </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/visitors" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
-                          {/* <i className="bi bi-people-fill me-3"></i> */}
-                          {sidebarOpen && <span>Visitors</span>}
-                      </NavLink>
-                  </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/community" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
-                          {/* <i className="bi bi-chat-dots me-3"></i> */}
-                          {sidebarOpen && <span>Community</span>}
-                      </NavLink>
-                  </li>
+                          {/* {sidebarOpen && <span>Outpasses</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
+                  
                   <li className="nav-item">
                       <NavLink to="/admin/food" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
                           {/* <i className="bi bi-cup-hot me-3"></i> */}
                           {sidebarOpen && <span>Food</span>}
                       </NavLink>
                   </li>
-                  <li className="nav-item">
-                      <NavLink to="/admin/profile" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}>
+                  
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/visitors" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
+                          {/* <i className="bi bi-people-fill me-3"></i> */}
+                          {/* {sidebarOpen && <span>Visitors</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/community" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
+                          {/* <i className="bi bi-chat-dots me-3"></i> */}
+                          {/* {sidebarOpen && <span>Community</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
+                  {/* <li className="nav-item"> */}
+                      {/* <NavLink to="/admin/profile" className={({isActive}) => `nav-link ${isActive ? 'active' : ''} d-flex align-items-center`}> */}
                           {/* <i className="bi bi-person-circle me-3"></i> */}
-                          {sidebarOpen && <span>Profile</span>}
-                      </NavLink>
-                  </li>
+                          {/* {sidebarOpen && <span>Profile</span>} */}
+                      {/* </NavLink> */}
+                  {/* </li> */}
                   <li className="nav-item">
                       <button
                           className="nav-link logout-btn d-flex align-items-center w-100 border-0 bg-transparent"
