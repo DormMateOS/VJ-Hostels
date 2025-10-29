@@ -107,7 +107,7 @@ const StudentFoodManager = () => {
                                 Overview
                             </button>
                         </li>
-                        <li className="nav-item">
+                        {/* <li className="nav-item">
                             <button
                                 className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('analytics')}
@@ -116,7 +116,7 @@ const StudentFoodManager = () => {
                                 <i className="bi bi-graph-up me-2"></i>
                                 Analytics Dashboard
                             </button>
-                        </li>
+                        </li> */}
                     </ul>
                 </div>
             </div>
