@@ -21,50 +21,48 @@ function generateJwt(user, role) {
 }
 
 
-// Role-based Google OAuth
-router.get('/google/:role', (req, res, next) => {
-  const role = req.params.role;
-  if (!['student', 'admin', 'security'].includes(role)) {
-    return res.redirect(`${process.env.CLIENT_URL}/login?error=invalid_role`);
-  }
-  
-  // Store role in session for callback
-  req.session.selectedRole = role;
-  passport.authenticate(`google-${role}`, { scope: ['profile', 'email'] })(req, res, next);
-});
+// Unified Google OAuth - Auto-detect role based on email
+router.get('/google', passport.authenticate('google', { 
+  scope: ['profile', 'email'] 
+}));
 
-router.get(
-  '/callback/:role',
+// Unified Google OAuth Callback
+router.get('/google/callback',
   (req, res, next) => {
-    const role = req.params.role;
-    passport.authenticate(`google-${role}`, (err, user, info) => {
-        // Verbose logging for debugging auth failures
-        console.log(`Auth callback invoked for role=${role} - session.selectedRole=${req.session?.selectedRole || 'n/a'}`);
+    passport.authenticate('google', (err, user, info) => {
+      console.log('🔄 Auth callback invoked');
+      
+      if (err) {
+        console.error('❌ Authentication error:', err);
+        if (info) console.error('Passport info:', info);
+        return res.redirect(`${process.env.CLIENT_URL}/?error=auth_failed`);
+      }
+
+      if (!user) {
+        console.warn('⚠️ No user found or unauthorized email. Info:', info);
+        const errorMessage = info?.message || 'unauthorized';
+        return res.redirect(`${process.env.CLIENT_URL}/?error=${encodeURIComponent(errorMessage)}`);
+      }
+
+      req.logIn(user, (err) => {
         if (err) {
-          console.error(`${role} authentication error:`, err);
-          if (info) console.error('Passport info:', info);
-          // Include minimal info in redirect (generic) and log details server-side
-          return res.redirect(`${process.env.CLIENT_URL}/login?error=auth_failed`);
+          console.error('❌ Login error:', err);
+          if (err.stack) console.error(err.stack);
+          return res.redirect(`${process.env.CLIENT_URL}/?error=login_failed`);
         }
 
-        if (!user) {
-          console.warn(`No ${role} user found or unauthorized email. Passport info:`, info);
-          return res.redirect(`${process.env.CLIENT_URL}/login?error=unauthorized`);
-        }
-
-        req.logIn(user, (err) => {
-          if (err) {
-            console.error(`${role} login error:`, err);
-            if (err.stack) console.error(err.stack);
-            return res.redirect(`${process.env.CLIENT_URL}/login?error=login_failed`);
-          }
-
-          console.log(`Successful ${role} login for user:`, { id: user._id, email: user.email, role: user.role });
-          const token = generateJwt(user, role);
-
-          // Redirect to role-specific route with JWT
-          return res.redirect(`${process.env.CLIENT_URL}/?auth=success&token=${token}&role=${role}`);
+        const role = user.role;
+        console.log(`✅ Successful ${role} login for user:`, { 
+          id: user._id, 
+          email: user.email, 
+          role: role 
         });
+        
+        const token = generateJwt(user, role);
+
+        // Redirect to frontend with JWT and role
+        return res.redirect(`${process.env.CLIENT_URL}/?auth=success&token=${token}&role=${role}`);
+      });
     })(req, res, next);
   }
 );

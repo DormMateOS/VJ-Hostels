@@ -17,8 +17,6 @@ const LoginPage = () => {
   const { login: adminLogin } = useAdmin();
 
   const [theme, setTheme] = useState("dark");
-  const [selectedRole, setSelectedRole] = useState("");
-  const [hoverRole, setHoverRole] = useState(null);
 
   const isDark = theme === "dark";
 
@@ -41,32 +39,43 @@ const LoginPage = () => {
     const authStatus = searchParams.get("auth");
     const token = searchParams.get("token");
     const role = searchParams.get("role");
-if (authStatus === "success" && token && role) {
-  // Store tokens FIRST
-  localStorage.setItem("token", token);
-  localStorage.setItem("auth-token", token);
-  
-  if (role === "security") {
-    localStorage.setItem("guard_token", token);
-  }
-  
-  // For admin role, also call AdminContext login to store token under 'adminToken' key
-  if (role === "admin") {
-    adminLogin({ role: "admin" }, token);
-  }
-  
-  forceResetAuthState();
-  toast.success("Successfully logged in with Google!");
-  
-  // Force a reload after navigation
-  setTimeout(() => {
-    const path = role === "security" ? "/security" : 
-                 role === "student" ? "/student" : "/admin";
-    navigate(path, { replace: true });
-    window.location.reload();
-  }, 100);
-}else if (searchParams.get("error")) {
-      toast.error("Authentication failed. Please try again.");
+    const error = searchParams.get("error");
+
+    if (authStatus === "success" && token && role) {
+      // Store tokens FIRST
+      localStorage.setItem("token", token);
+      localStorage.setItem("auth-token", token);
+      
+      if (role === "security") {
+        localStorage.setItem("guard_token", token);
+      }
+      
+      // For admin role, also call AdminContext login to store token under 'adminToken' key
+      if (role === "admin") {
+        adminLogin({ role: "admin" }, token);
+      }
+      
+      forceResetAuthState();
+      toast.success("Successfully logged in with Google!");
+      
+      // Force a reload after navigation
+      setTimeout(() => {
+        const path = role === "security" ? "/security" : 
+                     role === "student" ? "/student" : "/admin";
+        navigate(path, { replace: true });
+        window.location.reload();
+      }, 100);
+    } else if (error) {
+      // Decode and display the error message
+      const decodedError = decodeURIComponent(error);
+      
+      if (decodedError.includes("official hostel email")) {
+        toast.error("Please use your official hostel email to log in.");
+      } else if (decodedError.includes("Unauthorized email")) {
+        toast.error("Unauthorized email. Please use your institutional email.");
+      } else {
+        toast.error("Authentication failed. Please try again.");
+      }
     }
   }, [searchParams, navigate, forceResetAuthState, adminLogin]);
 
@@ -177,62 +186,23 @@ if (authStatus === "success" && token && role) {
           className="mb-4"
           style={{ fontSize: "0.95rem", color: themeStyles.subText }}
         >
-          Select your role and sign in with Google
+          Sign in with your institutional Google account
         </p>
 
-        {/* Role Buttons */}
-        <div className="mb-4 d-flex justify-content-between" style={{ gap: "12px" }}>
-          {[
-            { id: "student", label: "Student", icon: "🎓" },
-            { id: "admin", label: "Admin", icon: "👨‍💼" },
-            { id: "security", label: "Security", icon: "🛡️" },
-          ].map((role) => (
-            <button
-              key={role.id}
-              className="btn flex-grow-1"
-              style={{
-                backgroundColor: themeStyles.btnBg,
-                border: selectedRole === role.id
-                  ? "2px solid rgba(59,130,246,0.9)"
-                  : "2px solid transparent",
-                borderRadius: "12px",
-                color: themeStyles.textColor,
-                transition: "box-shadow 0.3s ease, border 0.3s ease",
-                minWidth: "100px",
-                boxShadow:
-                  hoverRole === role.id
-                    ? "0 0 12px rgba(59,130,246,0.6)"
-                    : selectedRole === role.id
-                    ? "0 0 18px rgba(59,130,246,0.7)"
-                    : "none",
-              }}
-              onClick={() => setSelectedRole(role.id)}
-              onMouseEnter={() => setHoverRole(role.id)}
-              onMouseLeave={() => setHoverRole(null)}
-            >
-              <span style={{ fontSize: "1.2rem" }}>{role.icon}</span>
-              <div style={{ fontSize: "0.9rem", marginTop: "4px" }}>
-                {role.label}
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* ORIGINAL Google OAuth Button */}
+        {/* Google OAuth Button */}
         <div className="d-grid">
-          <GoogleOAuthButton className="w-10"
+          <GoogleOAuthButton
             isLoading={isLoading}
-            disabled={!selectedRole}
-            selectedRole={selectedRole}
+            theme={theme}
           />
         </div>
 
-        {/* <p
+        <p
           className="mt-3"
           style={{ fontSize: "0.85rem", color: themeStyles.subText }}
         >
-          Secure Google Authentication
-        </p> */}
+          Students: Use your @vnrvjiet.in email
+        </p>
       </motion.div>
     </div>
   );
