@@ -6,17 +6,15 @@ import googleLogo from "../assets/google-logo.png";
 const GoogleOAuthButton = ({
   isLoading = false,
   disabled = false,
-  selectedRole = "",
   theme = "dark",
 }) => {
   const [isClicked, setIsClicked] = useState(false);
   const isDark = theme === "dark";
 
   const handleGoogleLogin = () => {
-    if (!selectedRole) return;
     setIsClicked(true);
     const API_URL = config.api.baseUrl;
-    window.location.href = `${API_URL}/auth/google/${selectedRole}`;
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   const isDisabled = disabled || isLoading || isClicked;
