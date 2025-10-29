@@ -33,6 +33,37 @@ foodEnhancedApp.post('/pause', expressAsyncHandler(async (req, res) => {
             return res.status(400).json({ error: 'Start date cannot be after end date' });
         }
 
+        // Get current date and time for validation
+        const nowTime = new Date();
+        const currentHour = nowTime.getHours();
+        const currentMinute = nowTime.getMinutes();
+        
+        // Get current date in local timezone (YYYY-MM-DD format)
+        const year = nowTime.getFullYear();
+        const month = String(nowTime.getMonth() + 1).padStart(2, '0');
+        const day = String(nowTime.getDate()).padStart(2, '0');
+        const currentDate = `${year}-${month}-${day}`;
+        
+        // Calculate tomorrow's date
+        const tomorrowDate = new Date(nowTime);
+        tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+        const tomorrowYear = tomorrowDate.getFullYear();
+        const tomorrowMonth = String(tomorrowDate.getMonth() + 1).padStart(2, '0');
+        const tomorrowDay = String(tomorrowDate.getDate()).padStart(2, '0');
+        const tomorrowDateStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`;
+        
+        // Validate 6 PM deadline if pause_from date is tomorrow
+        if (startDate === tomorrowDateStr) {
+            const tomorrowDeadline = 18; // 6:00 PM
+            
+            // Check if current time is at or after 6:00 PM (18:00)
+            if (currentHour >= tomorrowDeadline) {
+                return res.status(400).json({ 
+                    error: `Cannot create pause from ${startDate}. The deadline to create pauses for ${startDate} has passed (must be before 6:00 PM today). Current time: ${currentHour}:${String(currentMinute).padStart(2, '0')}` 
+                });
+            }
+        }
+
         // Check for overlapping pauses
         const existingPauses = await FoodPauseEnhanced.find({
             student_id: student._id,
@@ -55,14 +86,7 @@ foodEnhancedApp.post('/pause', expressAsyncHandler(async (req, res) => {
         }
 
         // Validate edit timing for today's pauses
-        const nowTime = new Date();
         const currentTime = nowTime.toTimeString().slice(0, 5);
-        
-        // Get current date in local timezone (not UTC)
-        const year = nowTime.getFullYear();
-        const month = String(nowTime.getMonth() + 1).padStart(2, '0');
-        const day = String(nowTime.getDate()).padStart(2, '0');
-        const currentDate = `${year}-${month}-${day}`;
         
         const mealTimings = {
             breakfast: { editDeadline: "05:00" },
