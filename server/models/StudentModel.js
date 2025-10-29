@@ -25,6 +25,10 @@ const studentSchema = new mongoose.Schema({
         type: String,
         // required: true
     },
+    parentName: {
+        type: String,
+        required: true
+    },
     password: {
         type: String,
         required: function () {
@@ -39,6 +43,10 @@ const studentSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true
+    },
+    branch: {
+        type: String,
+        required: true
     },
     role: {
         type: String,
