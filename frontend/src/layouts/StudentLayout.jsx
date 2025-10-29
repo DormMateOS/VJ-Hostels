@@ -51,7 +51,7 @@ function StudentLayout() {
   }, [sidebarOpen])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {/* Navbar */}
       <nav style={{
         backgroundColor: '#800000', // maroon
@@ -240,8 +240,18 @@ function StudentLayout() {
       {!isAnnouncementsPage && <AnnouncementBanner />}
 
       {/* Page Content */}
-      <main className="flex-1 content-area">
-        <div className="content-wrapper">
+      <main style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexGrow: 1,
+        padding: '1rem',
+        backgroundColor: '#f9fafb'
+      }}>
+        <div style={{
+          maxWidth: '1800px',
+          width: '100%'
+        }} className="content-wrapper">
           <Outlet />
         </div>
       </main>
