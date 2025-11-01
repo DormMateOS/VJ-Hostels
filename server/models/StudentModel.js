@@ -56,7 +56,7 @@ const studentSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    roomNumber: {
+    room: {
         type: String,
         default: null
     },

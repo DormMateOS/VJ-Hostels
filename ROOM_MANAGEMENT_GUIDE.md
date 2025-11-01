@@ -1,7 +1,7 @@
 # Room Management System - Implementation Guide
 
 ## Overview
-Enhanced Room Management feature that automatically generates all 468 hostel rooms and syncs students to their allocated rooms.
+Enhanced Room Management feature that syncs students to their pre-existing hostel rooms based on the `roomNumber` field in the student database.
 
 ## Features Implemented
 

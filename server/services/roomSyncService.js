@@ -3,10 +3,15 @@ const Student = require('../models/StudentModel');
 
 /**
  * Extract floor number from room number
- * Examples: 101 -> 1, 1201 -> 12
+ * Examples: 001 -> 0, 101 -> 1, 1201 -> 12
  */
 function extractFloorNumber(roomNumber) {
     const roomStr = roomNumber.toString();
+    
+    // Special case for room 001 (ground floor or special room)
+    if (roomStr === '001') {
+        return 0;
+    }
     
     // For rooms 1001-1239 (floors 10-12)
     if (roomStr.length === 4 && roomStr.startsWith('1')) {
@@ -18,8 +23,8 @@ function extractFloorNumber(roomNumber) {
 }
 
 /**
- * Generate all 468 hostel rooms based on the floor and room numbering pattern
- * 12 floors × 39 rooms per floor = 468 total rooms
+ * Generate all hostel rooms based on the floor and room numbering pattern
+ * 12 floors × 39 rooms per floor + 1 extra room (001) = 469 total rooms
  */
 async function generateAllRooms() {
     const TOTAL_FLOORS = 12;
@@ -32,6 +37,17 @@ async function generateAllRooms() {
     // Get all existing rooms
     const existingRooms = await Room.find({}, 'roomNumber');
     existingRooms.forEach(room => existingRoomNumbers.add(room.roomNumber));
+    
+    // Create room 001 if it doesn't exist (special extra room)
+    if (!existingRoomNumbers.has('001')) {
+        roomsToCreate.push({
+            roomNumber: '001',
+            floor: 0, // Ground floor or special designation
+            capacity: DEFAULT_CAPACITY,
+            occupants: [],
+            allocatedStudents: []
+        });
+    }
     
     // Generate room numbers for all floors
     for (let floor = 1; floor <= TOTAL_FLOORS; floor++) {
@@ -70,28 +86,30 @@ async function generateAllRooms() {
     
     return {
         created: roomsToCreate.length,
-        total: TOTAL_FLOORS * ROOMS_PER_FLOOR
+        total: (TOTAL_FLOORS * ROOMS_PER_FLOOR) + 1 // +1 for room 001
     };
 }
 
 /**
- * Sync students to their rooms based on roomNumber field in student collection
+ * Sync students to their rooms based on room field in student collection
+ * Works with existing pre-generated rooms
  */
 async function syncStudentsToRooms() {
     try {
-        // Get all students with room numbers
+        // Get all students with room numbers (active students only)
+        // Note: Students have 'room' field, not 'roomNumber'
         const studentsWithRooms = await Student.find({
-            roomNumber: { $exists: true, $ne: null, $ne: '' },
+            room: { $exists: true, $ne: null, $ne: '' },
             is_active: true
         });
         
-        console.log(`📊 Found ${studentsWithRooms.length} students with room assignments`);
+        console.log(`📊 Found ${studentsWithRooms.length} active students with room assignments`);
         
         // Extract unique room numbers from students
-        const uniqueRoomNumbers = [...new Set(studentsWithRooms.map(s => s.roomNumber))];
+        const uniqueRoomNumbers = [...new Set(studentsWithRooms.map(s => s.room))];
         console.log(`🏠 Unique room numbers in student data: ${uniqueRoomNumbers.length}`);
         
-        // Create any missing rooms from student data
+        // Check for missing rooms and create them if needed
         const createdRooms = [];
         for (const roomNumber of uniqueRoomNumbers) {
             const existingRoom = await Room.findOne({ roomNumber });
@@ -106,26 +124,48 @@ async function syncStudentsToRooms() {
                     allocatedStudents: []
                 });
                 createdRooms.push(newRoom);
-                console.log(`✨ Created room ${roomNumber} from student data`);
+                console.log(`✨ Created missing room ${roomNumber} from student data`);
             }
         }
         
-        // Clear all room occupants first (to avoid duplicates)
+        // Clear all room occupants first (to avoid duplicates and ensure clean sync)
         await Room.updateMany({}, { $set: { occupants: [], allocatedStudents: [] } });
-        console.log('🧹 Cleared all room occupants');
+        console.log('🧹 Cleared all room occupants for fresh sync');
         
         // Group students by room number
         const studentsByRoom = {};
+        const capacityWarnings = [];
+        
         studentsWithRooms.forEach(student => {
-            if (!studentsByRoom[student.roomNumber]) {
-                studentsByRoom[student.roomNumber] = [];
+            if (!studentsByRoom[student.room]) {
+                studentsByRoom[student.room] = [];
             }
-            studentsByRoom[student.roomNumber].push(student._id);
+            studentsByRoom[student.room].push(student._id);
         });
         
-        // Update each room with its students
+        // Update each room with its students and check capacity
         let updatedRooms = 0;
+        let studentsAllocated = 0;
+        
         for (const [roomNumber, studentIds] of Object.entries(studentsByRoom)) {
+            const room = await Room.findOne({ roomNumber });
+            
+            if (!room) {
+                console.warn(`⚠️ Room ${roomNumber} not found, skipping ${studentIds.length} students`);
+                continue;
+            }
+            
+            // Check capacity
+            if (studentIds.length > room.capacity) {
+                capacityWarnings.push({
+                    roomNumber,
+                    allocated: studentIds.length,
+                    capacity: room.capacity
+                });
+                console.warn(`⚠️ Room ${roomNumber} has ${studentIds.length} students but capacity is ${room.capacity}`);
+            }
+            
+            // Update room with students (even if over capacity - admin can fix later)
             await Room.findOneAndUpdate(
                 { roomNumber },
                 { 
@@ -135,16 +175,23 @@ async function syncStudentsToRooms() {
                     } 
                 }
             );
+            
             updatedRooms++;
+            studentsAllocated += studentIds.length;
         }
         
-        console.log(`✅ Updated ${updatedRooms} rooms with student allocations`);
+        console.log(`✅ Updated ${updatedRooms} rooms with ${studentsAllocated} student allocations`);
+        
+        if (capacityWarnings.length > 0) {
+            console.warn(`⚠️ ${capacityWarnings.length} rooms exceed capacity`);
+        }
         
         return {
             studentsProcessed: studentsWithRooms.length,
             roomsCreated: createdRooms.length,
             roomsUpdated: updatedRooms,
-            uniqueRooms: uniqueRoomNumbers.length
+            uniqueRooms: uniqueRoomNumbers.length,
+            capacityWarnings: capacityWarnings.length > 0 ? capacityWarnings : undefined
         };
     } catch (error) {
         console.error('❌ Error syncing students to rooms:', error);

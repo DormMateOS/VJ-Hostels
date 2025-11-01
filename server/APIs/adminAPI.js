@@ -1561,30 +1561,35 @@ adminApp.get('/dashboard-stats-enhanced', verifyAdmin, expressAsyncHandler(async
 // ==================== ROOM SYNC AND GENERATION ENDPOINTS ====================
 
 /**
- * Generate all 468 rooms and sync students to their rooms
- * This endpoint combines room generation and student allocation
+ * Sync students to their existing rooms
+ * Works with pre-generated rooms and allocates students based on their roomNumber field
  */
 adminApp.post('/rooms/sync', verifyAdmin, expressAsyncHandler(async (req, res) => {
     try {
-        console.log('🔄 Starting room sync process...');
+        console.log('🔄 Starting student-room sync process...');
         
-        // Step 1: Generate all 468 rooms
-        const generationResult = await roomSyncService.generateAllRooms();
-        console.log(`📦 Room generation: ${generationResult.created} created, ${generationResult.total} total`);
-        
-        // Step 2: Sync students to their rooms
+        // Sync students to their rooms (will create missing rooms if needed)
         const syncResult = await roomSyncService.syncStudentsToRooms();
         console.log(`👥 Student sync: ${syncResult.studentsProcessed} students, ${syncResult.roomsUpdated} rooms updated`);
         
-        // Step 3: Get statistics
+        // Get updated statistics
         const stats = await roomSyncService.getRoomStatistics();
         
-        res.status(200).json({
-            message: 'Room sync completed successfully',
-            generation: generationResult,
+        const response = {
+            message: 'Student-room sync completed successfully',
             sync: syncResult,
             statistics: stats
-        });
+        };
+        
+        // Include capacity warnings if any
+        if (syncResult.capacityWarnings) {
+            response.warnings = {
+                message: `${syncResult.capacityWarnings.length} rooms exceed capacity`,
+                details: syncResult.capacityWarnings
+            };
+        }
+        
+        res.status(200).json(response);
     } catch (error) {
         console.error('❌ Room sync error:', error);
         res.status(500).json({ error: error.message });

@@ -166,7 +166,7 @@ const Rooms = () => {
 
 
     const handleSyncRooms = async () => {
-        if (!window.confirm('This will:\n1. Generate all 468 hostel rooms (12 floors × 39 rooms)\n2. Sync students to their rooms based on database\n\nContinue?')) {
+        if (!window.confirm('This will sync all students to their assigned rooms based on the database.\n\nAny missing rooms will be created automatically.\n\nContinue?')) {
             return;
         }
 
@@ -181,15 +181,24 @@ const Rooms = () => {
                 }
             );
             
-            const { generation, sync, statistics } = response.data;
-            alert(
-                `✅ Room Sync Complete!\n\n` +
-                `📦 Rooms Created: ${generation.created}\n` +
-                `🏠 Total Rooms: ${generation.total}\n` +
+            const { sync, statistics, warnings } = response.data;
+            
+            let message = `✅ Student-Room Sync Complete!\n\n` +
                 `👥 Students Synced: ${sync.studentsProcessed}\n` +
-                `🔄 Rooms Updated: ${sync.roomsUpdated}\n\n` +
-                `📊 Occupancy: ${statistics.totalOccupied}/${statistics.totalCapacity} (${statistics.occupancyRate}%)`
-            );
+                `🔄 Rooms Updated: ${sync.roomsUpdated}\n` +
+                `🏠 Unique Rooms: ${sync.uniqueRooms}\n`;
+            
+            if (sync.roomsCreated > 0) {
+                message += `✨ Rooms Created: ${sync.roomsCreated}\n`;
+            }
+            
+            message += `\n📊 Occupancy: ${statistics.totalOccupied}/${statistics.totalCapacity} (${statistics.occupancyRate}%)`;
+            
+            if (warnings) {
+                message += `\n\n⚠️ Warning: ${warnings.message}`;
+            }
+            
+            alert(message);
             
             fetchRooms();
             fetchRoomStats();
@@ -367,13 +376,14 @@ const Rooms = () => {
                         className="btn btn-success"
                         onClick={handleSyncRooms}
                         disabled={syncingRooms}
+                        title="Sync students to their assigned rooms"
                     >
                         {syncingRooms ? (
                             <>
                                 <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 Syncing...
                             </>
-                        ) : '🔄 Sync All Rooms'}
+                        ) : '🔄 Sync Students to Rooms'}
                     </button>
 
                     <button
