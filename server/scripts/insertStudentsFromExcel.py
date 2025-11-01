@@ -16,7 +16,10 @@ import json
 load_dotenv()
 
 # MongoDB connection
-DBURL = os.getenv('DBURL', 'mongodb+srv://hackergkn:karthik@hackathon.xkjyqhh.mongodb.net/vjhostel?retryWrites=true&w=majority&appName=hackathon')
+DBURL = os.getenv('DBURL')
+if not DBURL:
+    print("✗ Error: DBURL environment variable not set")
+    sys.exit(1)
 
 def connect_to_db():
     """Connect to MongoDB"""
