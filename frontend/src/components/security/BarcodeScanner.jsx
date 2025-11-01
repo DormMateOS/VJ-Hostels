@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Quagga from 'quagga';
+import Quagga from '@ericblade/quagga2';
 import axios from 'axios';
 import { ScanLine, CheckCircle, AlertCircle } from 'lucide-react';
 import '../../styles/security/barcode-scanner.css';
