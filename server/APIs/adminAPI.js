@@ -12,6 +12,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
 const verifyAdmin = require('../middleware/verifyAdminMiddleware');
+const roomSyncService = require('../services/roomSyncService');
 
 
 
@@ -1553,6 +1554,95 @@ adminApp.get('/dashboard-stats-enhanced', verifyAdmin, expressAsyncHandler(async
         });
     } catch (error) {
         console.error('Enhanced dashboard stats error:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+// ==================== ROOM SYNC AND GENERATION ENDPOINTS ====================
+
+/**
+ * Generate all 468 rooms and sync students to their rooms
+ * This endpoint combines room generation and student allocation
+ */
+adminApp.post('/rooms/sync', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        console.log('🔄 Starting room sync process...');
+        
+        // Step 1: Generate all 468 rooms
+        const generationResult = await roomSyncService.generateAllRooms();
+        console.log(`📦 Room generation: ${generationResult.created} created, ${generationResult.total} total`);
+        
+        // Step 2: Sync students to their rooms
+        const syncResult = await roomSyncService.syncStudentsToRooms();
+        console.log(`👥 Student sync: ${syncResult.studentsProcessed} students, ${syncResult.roomsUpdated} rooms updated`);
+        
+        // Step 3: Get statistics
+        const stats = await roomSyncService.getRoomStatistics();
+        
+        res.status(200).json({
+            message: 'Room sync completed successfully',
+            generation: generationResult,
+            sync: syncResult,
+            statistics: stats
+        });
+    } catch (error) {
+        console.error('❌ Room sync error:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+/**
+ * Get all rooms with their allocated students
+ * Returns rooms grouped by floor with full student details
+ */
+adminApp.get('/rooms/all-with-students', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const rooms = await roomSyncService.getAllRoomsWithStudents();
+        res.status(200).json(rooms);
+    } catch (error) {
+        console.error('❌ Error fetching rooms with students:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+/**
+ * Get rooms grouped by floor
+ */
+adminApp.get('/rooms/by-floor', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const roomsByFloor = await roomSyncService.getRoomsByFloor();
+        res.status(200).json(roomsByFloor);
+    } catch (error) {
+        console.error('❌ Error fetching rooms by floor:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+/**
+ * Get room statistics
+ */
+adminApp.get('/rooms/statistics', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const stats = await roomSyncService.getRoomStatistics();
+        res.status(200).json(stats);
+    } catch (error) {
+        console.error('❌ Error fetching room statistics:', error);
+        res.status(500).json({ error: error.message });
+    }
+}));
+
+/**
+ * Generate all 468 rooms (without syncing students)
+ */
+adminApp.post('/rooms/generate-all', verifyAdmin, expressAsyncHandler(async (req, res) => {
+    try {
+        const result = await roomSyncService.generateAllRooms();
+        res.status(200).json({
+            message: `Successfully generated rooms`,
+            ...result
+        });
+    } catch (error) {
+        console.error('❌ Room generation error:', error);
         res.status(500).json({ error: error.message });
     }
 }));
